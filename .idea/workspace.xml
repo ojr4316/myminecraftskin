@@ -1,9 +1,136 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="9d8cd45a-e373-4ec1-aab6-8e45cfb018b8" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/jsLibraryMappings.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/img/bg.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/img/front.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/img/skin.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/myminecraftskin.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/myminecraftskin.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/App.css" beforeDir="false" afterPath="$PROJECT_DIR$/src/App.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/App.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/App.js" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="ComposerSettings">
+    <execution>
+      <executable />
+    </execution>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="PhpDebugGeneral" listening_started="true" />
   <component name="ProjectId" id="1VMhkGfGEj1c957Xt64heE6DA3i" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true">
+    <ConfirmationsSetting value="2" id="Add" />
+  </component>
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showExcludedFiles" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
   <component name="PropertiesComponent">
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
+    <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
     <property name="WebServerToolWindowFactoryState" value="true" />
+    <property name="node.js.detected.package.eslint" value="true" />
+    <property name="node.js.detected.package.tslint" value="true" />
+    <property name="node.js.path.for.package.eslint" value="project" />
+    <property name="node.js.path.for.package.tslint" value="project" />
+    <property name="node.js.selected.package.eslint" value="(autodetect)" />
+    <property name="node.js.selected.package.tslint" value="(autodetect)" />
     <property name="nodejs_interpreter_path" value="node" />
+    <property name="nodejs_package_manager_path" value="npm" />
+  </component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\314ow\PhpstormProjects\myminecraftskin\src\img" />
+    </key>
+  </component>
+  <component name="RunManager" selected="npm.npm start">
+    <configuration name="Debug Application" type="JavascriptDebugType" uri="http://localhost:3000">
+      <method v="2" />
+    </configuration>
+    <configuration name="npm start" type="js.build_tools.npm">
+      <package-json value="$PROJECT_DIR$/package.json" />
+      <command value="run" />
+      <scripts>
+        <script value="start" />
+      </scripts>
+      <node-interpreter value="project" />
+      <envs />
+      <method v="2" />
+    </configuration>
+  </component>
+  <component name="ServiceViewManager">
+    <option name="viewStates">
+      <list>
+        <serviceView>
+          <treeState>
+            <expand />
+            <select />
+          </treeState>
+        </serviceView>
+      </list>
+    </option>
+  </component>
+  <component name="SvnConfiguration">
+    <configuration />
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="9d8cd45a-e373-4ec1-aab6-8e45cfb018b8" name="Default Changelist" comment="" />
+      <created>1577069012421</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1577069012421</updated>
+      <workItem from="1577069014259" duration="22735000" />
+      <workItem from="1577649773250" duration="20770000" />
+      <workItem from="1577692127349" duration="6766000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="1" />
+  </component>
+  <component name="WindowStateProjectService">
+    <state x="585" y="115" key="CommitChangelistDialog2" timestamp="1577730471616">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state x="585" y="115" key="CommitChangelistDialog2/0.0.1920.1040/-1920.94.1920.1080@0.0.1920.1040" timestamp="1577730471616" />
+    <state width="938" height="269" key="GridCell.Tab.0.bottom" timestamp="1577696293947">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state width="938" height="269" key="GridCell.Tab.0.bottom/0.0.1920.1040/-1920.94.1920.1080@0.0.1920.1040" timestamp="1577696293947" />
+    <state width="938" height="269" key="GridCell.Tab.0.center" timestamp="1577696293947">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state width="938" height="269" key="GridCell.Tab.0.center/0.0.1920.1040/-1920.94.1920.1080@0.0.1920.1040" timestamp="1577696293947" />
+    <state width="938" height="269" key="GridCell.Tab.0.left" timestamp="1577696293947">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state width="938" height="269" key="GridCell.Tab.0.left/0.0.1920.1040/-1920.94.1920.1080@0.0.1920.1040" timestamp="1577696293947" />
+    <state width="938" height="269" key="GridCell.Tab.0.right" timestamp="1577696293947">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state width="938" height="269" key="GridCell.Tab.0.right/0.0.1920.1040/-1920.94.1920.1080@0.0.1920.1040" timestamp="1577696293947" />
+    <state x="552" y="254" key="Vcs.Push.Dialog.v2" timestamp="1577730523111">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state x="552" y="254" key="Vcs.Push.Dialog.v2/0.0.1920.1040/-1920.94.1920.1080@0.0.1920.1040" timestamp="1577730523111" />
+    <state x="-1297" y="328" width="672" height="705" key="search.everywhere.popup" timestamp="1577665513660">
+      <screen x="-1920" y="94" width="1920" height="1080" />
+    </state>
+    <state x="-1297" y="328" width="672" height="705" key="search.everywhere.popup/0.0.1920.1040/-1920.94.1920.1080@-1920.94.1920.1080" timestamp="1577665513660" />
+    <state x="623" y="225" width="672" height="678" key="search.everywhere.popup/0.0.1920.1040/-1920.94.1920.1080@0.0.1920.1040" timestamp="1577070557776" />
   </component>
 </project>
