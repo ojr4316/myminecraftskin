@@ -2,13 +2,6 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="9d8cd45a-e373-4ec1-aab6-8e45cfb018b8" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/jsLibraryMappings.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/img/bg.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/img/front.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/img/skin.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/myminecraftskin.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/myminecraftskin.iml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/package-lock.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
@@ -26,6 +19,11 @@
     </execution>
   </component>
   <component name="Git.Settings">
+    <option name="PREVIOUS_COMMIT_AUTHORS">
+      <list>
+        <option value="Owen &lt;314owen@gmail.com&gt;" />
+      </list>
+    </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="PhpDebugGeneral" listening_started="true" />
@@ -42,6 +40,11 @@
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
     <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
     <property name="WebServerToolWindowFactoryState" value="true" />
+    <property name="WebServerToolWindowPanel.toolwindow.highlight.mappings" value="true" />
+    <property name="WebServerToolWindowPanel.toolwindow.highlight.symlinks" value="true" />
+    <property name="WebServerToolWindowPanel.toolwindow.show.date" value="false" />
+    <property name="WebServerToolWindowPanel.toolwindow.show.permissions" value="false" />
+    <property name="WebServerToolWindowPanel.toolwindow.show.size" value="false" />
     <property name="node.js.detected.package.eslint" value="true" />
     <property name="node.js.detected.package.tslint" value="true" />
     <property name="node.js.path.for.package.eslint" value="project" />
@@ -96,6 +99,9 @@
       <workItem from="1577069014259" duration="22735000" />
       <workItem from="1577649773250" duration="20770000" />
       <workItem from="1577692127349" duration="6766000" />
+      <workItem from="1578079557734" duration="23399000" />
+      <workItem from="1578342312791" duration="41409000" />
+      <workItem from="1579074088047" duration="1790000" />
     </task>
     <servers />
   </component>
@@ -103,30 +109,30 @@
     <option name="version" value="1" />
   </component>
   <component name="WindowStateProjectService">
-    <state x="585" y="115" key="CommitChangelistDialog2" timestamp="1577730471616">
+    <state x="585" y="115" key="CommitChangelistDialog2" timestamp="1577730588286">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state x="585" y="115" key="CommitChangelistDialog2/0.0.1920.1040/-1920.94.1920.1080@0.0.1920.1040" timestamp="1577730471616" />
-    <state width="938" height="269" key="GridCell.Tab.0.bottom" timestamp="1577696293947">
+    <state x="585" y="115" key="CommitChangelistDialog2/0.0.1920.1040/-1920.94.1920.1080@0.0.1920.1040" timestamp="1577730588286" />
+    <state width="938" height="269" key="GridCell.Tab.0.bottom" timestamp="1578535135449">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="938" height="269" key="GridCell.Tab.0.bottom/0.0.1920.1040/-1920.94.1920.1080@0.0.1920.1040" timestamp="1577696293947" />
-    <state width="938" height="269" key="GridCell.Tab.0.center" timestamp="1577696293947">
+    <state width="938" height="269" key="GridCell.Tab.0.bottom/0.0.1920.1040/-1920.94.1920.1080@0.0.1920.1040" timestamp="1578535135449" />
+    <state width="938" height="269" key="GridCell.Tab.0.center" timestamp="1578535135448">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="938" height="269" key="GridCell.Tab.0.center/0.0.1920.1040/-1920.94.1920.1080@0.0.1920.1040" timestamp="1577696293947" />
-    <state width="938" height="269" key="GridCell.Tab.0.left" timestamp="1577696293947">
+    <state width="938" height="269" key="GridCell.Tab.0.center/0.0.1920.1040/-1920.94.1920.1080@0.0.1920.1040" timestamp="1578535135448" />
+    <state width="938" height="269" key="GridCell.Tab.0.left" timestamp="1578535135448">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="938" height="269" key="GridCell.Tab.0.left/0.0.1920.1040/-1920.94.1920.1080@0.0.1920.1040" timestamp="1577696293947" />
-    <state width="938" height="269" key="GridCell.Tab.0.right" timestamp="1577696293947">
+    <state width="938" height="269" key="GridCell.Tab.0.left/0.0.1920.1040/-1920.94.1920.1080@0.0.1920.1040" timestamp="1578535135448" />
+    <state width="938" height="269" key="GridCell.Tab.0.right" timestamp="1578535135449">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state width="938" height="269" key="GridCell.Tab.0.right/0.0.1920.1040/-1920.94.1920.1080@0.0.1920.1040" timestamp="1577696293947" />
-    <state x="552" y="254" key="Vcs.Push.Dialog.v2" timestamp="1577730523111">
+    <state width="938" height="269" key="GridCell.Tab.0.right/0.0.1920.1040/-1920.94.1920.1080@0.0.1920.1040" timestamp="1578535135449" />
+    <state x="552" y="254" key="Vcs.Push.Dialog.v2" timestamp="1577730591261">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state x="552" y="254" key="Vcs.Push.Dialog.v2/0.0.1920.1040/-1920.94.1920.1080@0.0.1920.1040" timestamp="1577730523111" />
+    <state x="552" y="254" key="Vcs.Push.Dialog.v2/0.0.1920.1040/-1920.94.1920.1080@0.0.1920.1040" timestamp="1577730591261" />
     <state x="-1297" y="328" width="672" height="705" key="search.everywhere.popup" timestamp="1577665513660">
       <screen x="-1920" y="94" width="1920" height="1080" />
     </state>
