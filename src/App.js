@@ -1,9 +1,10 @@
 import React, {Component} from 'react';
-import bg from './img/bg2.png';
+import bg2 from './img/bg2.png';
+import bg from './img/bg.png';
 import skin from './img/skin.png';
 import './App.css';
 import * as THREE from "three";
-
+import Pallet from './components/Pallet.js';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome'
 import {faPen, faEraser, faSync, faLayerGroup, faEyeDropper} from '@fortawesome/free-solid-svg-icons'
 
@@ -15,17 +16,23 @@ export default class App extends Component {
     ctx = null;
     clickDelay = 0;
     mouse = null;
+    drawing = false;
+    dragging = false;
 
-    colors = ['#ff0000', '#0000ff',
-        '#00ff00', '#ffff00'];
+    colors = ['#f44336', '#2196F3',
+        '#4CAF50', '#FFEB3B', "#FF9800", "#9C27B0"];
 
     state = {
         mode: 0, // 0 - pencil, 1 - eraser, 2 - rotate
         colorSlot: 0,
         ctx: null,
         outer: true,
-        part: -1 // 0 - head, 1 - chest, 2 - left arm, 3 - right arm, 4 - left leg, 5 - right leg
+        part: -1, // 0 - head, 1 - chest, 2 - left arm, 3 - right arm, 4 - left leg, 5 - right leg,
+        pallet: false
     };
+
+    touchDevice = (navigator.maxTouchPoints || 'ontouchstart' in document.documentElement);
+    mouseDown = false;
 
     componentDidMount() {
         this.scene = new THREE.Scene();
@@ -42,7 +49,12 @@ export default class App extends Component {
         controls.enablePan = false;
         controls.enableZoom = true;
 
-        let tex = new THREE.TextureLoader().load(bg);
+        let tex;
+        if (this.touchDevice) {
+            tex = new THREE.TextureLoader().load(bg2);
+        } else {
+            tex = new THREE.TextureLoader().load(bg);
+        }
         this.scene.background = tex;
 
         var raycaster = new THREE.Raycaster(); // create once
@@ -877,7 +889,6 @@ export default class App extends Component {
                 }
             }
 
-
             document.addEventListener('mousemove', (e) => {
                 this.mouse.x = (e.clientX / renderer.domElement.clientWidth) * 2 - 1;
                 this.mouse.y = -(e.clientY / renderer.domElement.clientHeight) * 2 + 1;
@@ -890,6 +901,17 @@ export default class App extends Component {
 
             }, {passive: false});
 
+            if (!this.touchDevice) {
+                document.addEventListener('mousedown', (e) => {
+                    this.mouseDown = true;
+                });
+                document.addEventListener('mouseup', (e) => {
+                    this.mouseDown = false;
+                    this.drawing = false;
+                    this.dragging = false;
+                });
+            }
+
             animate();
         };
 
@@ -899,27 +921,31 @@ export default class App extends Component {
 
             controls.update();
             renderer.render(this.scene, camera);
+
+            update();
         };
 
-        init();
-
-        // Double Click Handler
-        setInterval(() => {
-            if (this.clickDelay > 0) {
-                this.clickDelay -= 1;
-            }
-        }, 1000 / 10);
-
-
-        setInterval(() => {
+        let update = () => {
             let {colorSlot, mode, outer} = this.state;
             raycaster.setFromCamera(this.mouse, camera);
             let intersects = raycaster.intersectObjects(this.scene.children);
 
             switch (mode) {
                 case 0: // Pencil
-                    controls.enabled = false;
-                    if (intersects.length > 0) {
+                    if (!this.touchDevice && !this.mouseDown) {
+                        break;
+                    }
+
+                    if (!this.touchDevice && this.dragging && !this.drawing) {
+                        controls.enabled = true;
+                    }
+
+                    if (intersects.length > 0 && !this.dragging) {
+                        controls.enabled = false;
+                        if (!this.touchDevice) {
+                            this.dragging = false;
+                            this.drawing = true;
+                        }
                         let faceIndex = intersects[0].faceIndex;
                         intersects[0].object.geometry.faces[faceIndex].color.set(new THREE.Color(this.colors[colorSlot]));
                         intersects[0].object.geometry.faces[faceIndex].materialIndex = 0;
@@ -933,12 +959,29 @@ export default class App extends Component {
                         intersects[0].object.geometry.colorsNeedUpdate = true;
                         intersects[0].object.geometry.groupsNeedUpdate = true;
                         this.setColored(intersects[0].object, faceIndex, true);
+                        this.updateSkinPreview();
+                    } else {
+                        if (!this.touchDevice && !this.drawing) {
+                            this.dragging = true;
+                        }
                     }
                     break;
                 case 1: // Eraser
-                    controls.enabled = false;
+                    if (!this.touchDevice && !this.mouseDown) {
+                        break;
+                    }
+
+                    if (!this.touchDevice && this.dragging && !this.drawing) {
+                        controls.enabled = true;
+                    }
+
                     if (outer) {
-                        if (intersects.length > 0) {
+                        if (intersects.length > 0 && !this.dragging) {
+                            controls.enabled = false;
+                            if (!this.touchDevice) {
+                                this.dragging = false;
+                                this.drawing = true;
+                            }
                             let faceIndex = intersects[0].faceIndex;
                             intersects[0].object.geometry.faces[faceIndex].color.set(new THREE.Color("white"));
                             intersects[0].object.geometry.faces[faceIndex].materialIndex = 1;
@@ -951,7 +994,12 @@ export default class App extends Component {
                             }
                             intersects[0].object.geometry.colorsNeedUpdate = true;
                             intersects[0].object.geometry.groupsNeedUpdate = true;
-                            console.log(this.setColored(intersects[0].object, faceIndex, false));
+                            this.setColored(intersects[0].object, faceIndex, false);
+                            this.updateSkinPreview();
+                        } else {
+                            if (!this.touchDevice && !this.drawing) {
+                                this.dragging = true;
+                            }
                         }
                     }
                     break;
@@ -959,17 +1007,43 @@ export default class App extends Component {
                     controls.enabled = true;
                     break;
                 case 3: // Eye Dropper
-                    controls.enabled = false;
-                    if (intersects.length > 0) {
+                    if (!this.touchDevice && !this.mouseDown) {
+                        break;
+                    }
+
+                    if (!this.touchDevice && this.dragging && !this.drawing) {
+                        controls.enabled = true;
+                    }
+
+                    if (intersects.length > 0 && !this.dragging) {
+                        controls.enabled = false;
+                        if (!this.touchDevice) {
+                            this.dragging = false;
+                            this.drawing = true;
+                        }
                         let faceIndex = intersects[0].faceIndex;
                         let c = intersects[0].object.geometry.faces[faceIndex].color;
                         this.colors[colorSlot] = `rgb(${c.r * 255}, ${c.g * 255}, ${c.b * 255})`;
                         this.updateColors();
+                    } else {
+                        if (!this.touchDevice && !this.drawing) {
+                            this.dragging = true;
+                        }
                     }
 
                     break;
             }
-        }, 1000 / 30);
+        };
+
+        init();
+
+        // Double Click Handler
+        setInterval(() => {
+            if (this.clickDelay > 0) {
+                this.clickDelay -= 1;
+            }
+        }, 1000 / 10);
+
 
         // Setup preview canvas
         this.canvas = this.refs.canvas;
@@ -979,30 +1053,28 @@ export default class App extends Component {
         this.canvas.height = 64;
 
         this.loadImageFromFile(skin);
+    };
 
-        // Skin Preview
-        setInterval(() => {
-            const {pixels} = this;
-            for (let i = 0; i < pixels.length; i++) {
-                for (let j = 0; j < pixels[i].length; j++) {
-                    if (pixels[i][j] !== 0) {
-                        if (pixels[i][j].hasColor) {
-                            let c = pixels[i][j].cube.geometry.faces[pixels[i][j].side].color;
-                            this.ctx.fillStyle = "rgb(" + (c.r * 255) + ", " + (c.g * 255) + ", " + (c.b * 255) + ")";
-                            this.ctx.fillRect(i, j, 1, 1);
-                        } else {
-                            if (pixels[i][j].external) {
-                                this.ctx.clearRect(i, j, 1, 1);
-                            }
+
+    updateSkinPreview = () => {
+        const {pixels} = this;
+        for (let i = 0; i < pixels.length; i++) {
+            for (let j = 0; j < pixels[i].length; j++) {
+                if (pixels[i][j] !== 0) {
+                    if (pixels[i][j].hasColor) {
+                        let c = pixels[i][j].cube.geometry.faces[pixels[i][j].side].color;
+                        this.ctx.fillStyle = "rgb(" + (c.r * 255) + ", " + (c.g * 255) + ", " + (c.b * 255) + ")";
+                        this.ctx.fillRect(i, j, 1, 1);
+                    } else {
+                        if (pixels[i][j].external) {
+                            this.ctx.clearRect(i, j, 1, 1);
                         }
                     }
                 }
             }
-
-        }, 1000 / 1);
-
+        }
+        return true;
     };
-
 
     setColored = (cube, side, colored) => {
         let {pixels} = this;
@@ -1037,13 +1109,42 @@ export default class App extends Component {
     colorSelect = (e) => {
         if (this.clickDelay === 0) {
             this.clickDelay = 5;
+            this.setState({colorSlot: parseInt(e.target.attributes.getNamedItem('slot').value)});
+            this.setState({mode: 0});
         } else {
-            alert("double");
+            this.openPallet();
         }
+    };
 
-        console.log(e.target.attributes.getNamedItem('slot').value);
-        this.setState({colorSlot: parseInt(e.target.attributes.getNamedItem('slot').value)});
-        this.setState({mode: 0});
+    changeColorSlot = (e) => {
+        this.colors[this.state.colorSlot] = e.target.attributes.getNamedItem('color').value;
+        this.updateColors();
+        this.closePallet();
+    };
+
+    changeColorSlotCustom = (h) => {
+        if (h.length === 7 && /^#[0-9A-F]{6}$/i.test(h)) {
+            this.colors[this.state.colorSlot] = h;
+        } else if (h.length === 6) {
+           this.colors[this.state.colorSlot] = "#" + h;
+        }
+        this.updateColors();
+        this.closePallet();
+    };
+
+    openPallet = () => {
+        if (!this.state.pallet) {
+            this.setState({pallet: true});
+            this.setState({mode: -1});
+        }
+    };
+
+    closePallet = () => {
+        if (this.state.pallet) {
+            this.setState({pallet: false});
+            this.mouse.x = -100;
+            this.setState({mode: 0});
+        }
     };
 
     setPen = () => {
@@ -1075,6 +1176,15 @@ export default class App extends Component {
                 break;
             case 3:
                 this.refs.slot3.style.backgroundColor = this.colors[this.state.colorSlot];
+                break;
+            case 4:
+                this.refs.slot4.style.backgroundColor = this.colors[this.state.colorSlot];
+                break;
+            case 5:
+                this.refs.slot5.style.backgroundColor = this.colors[this.state.colorSlot];
+                break;
+            default:
+                alert("An unknown error as occurred");
                 break;
         }
     };
@@ -1233,6 +1343,18 @@ export default class App extends Component {
         img.src = file;
     };
 
+    download = () => {
+        if (this.canvas !== null && this.updateSkinPreview()) {
+            var download = document.getElementById("download");
+            var image = this.canvas.toDataURL("image/png");
+            download.setAttribute("href", image);
+        }
+    };
+
+    upload = () => {
+        document.getElementById("selectImage").click();
+    };
+
     render() {
         return (
             <div>
@@ -1259,27 +1381,37 @@ export default class App extends Component {
                     </div>
                 </div>
 
-
                 <div className="colors">
                     <div onClick={this.colorSelect} ref="slot0" slot='0'
                          className={"color-select" + (this.state.colorSlot === 0 ? ' cs-selected' : '')}
-                         style={{backgroundColor: "red"}}/>
+                         style={{backgroundColor: "#f44336"}}/>
                     <div onClick={this.colorSelect} ref="slot1" slot='1'
                          className={"color-select" + (this.state.colorSlot === 1 ? ' cs-selected' : '')}
-                         style={{backgroundColor: "blue"}}/>
+                         style={{backgroundColor: "#2196F3"}}/>
                     <div onClick={this.colorSelect} ref="slot2" slot='2'
                          className={"color-select" + (this.state.colorSlot === 2 ? ' cs-selected' : '')}
-                         style={{backgroundColor: "green"}}/>
+                         style={{backgroundColor: "#4CAF50"}}/>
                     <div onClick={this.colorSelect} ref="slot3" slot='3'
                          className={"color-select" + (this.state.colorSlot === 3 ? ' cs-selected' : '')}
-                         style={{backgroundColor: "yellow"}}/>
-                    <input type="file" onChange={this.loadImage} className="load-image"
-                           style={{backgroundColor: "aquamarine"}}/>
+                         style={{backgroundColor: "#FFEB3B"}}/>
+                    <div onClick={this.colorSelect} ref="slot4" slot='4'
+                         className={"color-select" + (this.state.colorSlot === 4 ? ' cs-selected' : '')}
+                         style={{backgroundColor: "#FF9800"}}/>
+                    <div onClick={this.colorSelect} ref="slot5" slot='5'
+                         className={"color-select" + (this.state.colorSlot === 5 ? ' cs-selected' : '')}
+                         style={{backgroundColor: "#9C27B0"}}/>
+                     <br/>
+                     <div style={{textAlign: "center"}}>
+                         <button className="custom-button" onClick={this.upload}>Upload</button>
+                         <input id='selectImage' hidden style={{display: "none"}} type="file" onChange={this.loadImage} />
+
+                         <a id="download" download="skin.png"><button type="button" className="custom-button" onClick={this.download}>Download</button></a>
+                     </div>
                 </div>
 
-                <canvas ref="canvas"
-                        style={{position: "absolute", width: "128px", height: "128px", imageRendering: "pixelated"}}/>
+                <canvas ref="canvas" className="preview-canvas"/>
 
+                <Pallet colorSlot={this.state.colorSlot} colorSelect={this.changeColorSlot} colorSelectCustom={this.changeColorSlotCustom} closePallet={this.closePallet} pallet={this.state.pallet}/>
 
             </div>
         );
