@@ -7,6 +7,8 @@ import face_alex from '../img/face_alex.png';
 
 export default class Menu extends Component {
 
+    lastTarget = null;
+
     state = {
         skinType: "steve"
     };
@@ -20,6 +22,39 @@ export default class Menu extends Component {
 
         this.props.canvasAccess(this.canvas);
 
+        window.addEventListener("dragenter", (e) => {
+            e.preventDefault();
+            console.log("dragenter");
+
+            document.querySelector(".dropzone").style.visibility = "";
+            document.querySelector(".dropzone").style.opacity = 1;
+        }, false);
+
+        window.addEventListener("dragover",function(e){
+            e.preventDefault();
+            console.log("dragover");
+            document.querySelector(".dropzone").style.visibility = "";
+            document.querySelector(".dropzone").style.opacity = 1;
+        },false);
+
+        window.addEventListener("drop",(e) => {
+            e.preventDefault();
+            console.log("DROP");
+
+
+            this.props.loadFromDrop(e.dataTransfer.files);
+
+            document.querySelector(".dropzone").style.visibility = "hidden";
+            document.querySelector(".dropzone").style.opacity = 0;
+        },false);
+
+        window.addEventListener("dragleave", (e) => {
+            e.preventDefault();
+            console.log("dragleave");
+
+            document.querySelector(".dropzone").style.visibility = "hidden";
+            document.querySelector(".dropzone").style.opacity = 0;
+        }, false);
     }
 
     download = () => {
@@ -47,6 +82,7 @@ export default class Menu extends Component {
 
     render() {
         return (
+            <div>
             <div className="menu" style={{display: this.props.menu ? "initial" : "none"}}>
                 <FontAwesomeIcon onClick={this.props.closeMenu} className="close" icon={faTimes} size="2x"/>
 
@@ -70,6 +106,8 @@ export default class Menu extends Component {
                     <button className="custom-button" onClick={this.props.fromScratch}>Start New</button>
 
                 </div>
+            </div>
+            <div style={{visibility: "hidden", opacity: "0"}} className="dropzone" />
             </div>
         );
     }

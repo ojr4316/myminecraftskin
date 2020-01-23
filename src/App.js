@@ -362,45 +362,6 @@ export default class App extends Component {
 
     };
 
-    addAll = () => {
-        this.head.position.set(0, 12, 0);
-        this.headOuter.position.set(0, 12, 0);
-        this.chest.position.set(0, 2, 0);
-        this.chestOuter.position.set(0, 2, 0);
-
-        if (this.state.isAlex) {
-            this.armL.position.set(5.5, 2, 0);
-            this.armLOuter.position.set(5.5, 2, 0);
-            this.armR.position.set(-5.5, 2, 0);
-            this.armROuter.position.set(-5.5, 2, 0);
-        } else {
-            this.armL.position.set(6, 2, 0);
-            this.armLOuter.position.set(6, 2, 0);
-            this.armR.position.set(-6, 2, 0);
-            this.armROuter.position.set(-6, 2, 0);
-        }
-
-        this.legL.position.set(-2, -10, 0);
-        this.legLOuter.position.set(-2, -10, 0);
-        this.legR.position.set(2, -10, 0);
-        this.legROuter.position.set(2, -10, 0);
-
-        this.scene.add(this.head);
-        this.scene.add(this.chest);
-        this.scene.add(this.armL);
-        this.scene.add(this.armR);
-        this.scene.add(this.legL);
-        this.scene.add(this.legR);
-        if (this.state.outer) {
-            this.scene.add(this.armLOuter);
-            this.scene.add(this.armROuter);
-            this.scene.add(this.chestOuter);
-            this.scene.add(this.headOuter);
-            this.scene.add(this.legLOuter);
-            this.scene.add(this.legROuter);
-        }
-    };
-
     createBodyPart = (objRef, texture, leftParam, rightParam, topParam, botParam, frontParam, backParam, dims) => {
         let left = texture.clone();
         let right = texture.clone();
@@ -619,7 +580,7 @@ export default class App extends Component {
             {sizeX: 4, sizeY: 12, xOffset: 12, yOffset: 36},
             {x: 4, y: 12, z: 4, isOuter: true});
 
-        this.addAll();
+        this.showFull();
     };
 
     colorSelect = (e) => {
@@ -699,12 +660,10 @@ export default class App extends Component {
     };
 
     setAlex = (t) => {
-        console.log("isAlex: " + t);
         this.setState({isAlex: t});
     };
 
     clearScene = () => {
-        console.log("clearing");
         while (this.scene.children.length) {
             this.scene.remove(this.scene.children[0]);
         }
@@ -718,18 +677,29 @@ export default class App extends Component {
         this.chest.position.set(0, 2, 0);
         this.scene.add(this.chest);
         this.chestOuter.position.set(0, 2, 0);
-        this.armL.position.set(6, 2, 0);
+
         this.scene.add(this.armL);
-        this.armLOuter.position.set(6, 2, 0);
-        this.armR.position.set(-6, 2, 0);
         this.scene.add(this.armR);
-        this.armROuter.position.set(-6, 2, 0);
-        this.legL.position.set(-2, -10, 0);
         this.scene.add(this.legL);
+        this.scene.add(this.legR);
+        this.legL.position.set(-2, -10, 0);
         this.legLOuter.position.set(-2, -10, 0);
         this.legR.position.set(2, -10, 0);
-        this.scene.add(this.legR);
         this.legROuter.position.set(2, -10, 0);
+
+        if (this.state.isAlex) {
+            this.armL.position.set(5.5, 2, 0);
+            this.armLOuter.position.set(5.5, 2, 0);
+            this.armR.position.set(-5.5, 2, 0);
+            this.armROuter.position.set(-5.5, 2, 0);
+        } else {
+            this.armL.position.set(6, 2, 0);
+            this.armLOuter.position.set(6, 2, 0);
+            this.armR.position.set(-6, 2, 0);
+            this.armROuter.position.set(-6, 2, 0);
+        }
+
+
 
         if (this.state.outer) {
             this.scene.add(this.headOuter);
@@ -905,6 +875,7 @@ export default class App extends Component {
     };
 
     loadImage = (e) => {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         if (this.state.menu) {
             this.closeMenu();
         }
@@ -926,7 +897,32 @@ export default class App extends Component {
         reader.readAsDataURL(e.target.files[0]);
     };
 
+    loadImageFromDrop = (e) => {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        if (this.state.menu) {
+            this.closeMenu();
+        }
+
+        let reader = new FileReader();
+        reader.onload = (event) => {
+            let img = new Image();
+            img.onload = () => {
+                if (img.width === 64 && img.height === 64) {
+                    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                    this.ctx.drawImage(img, 0, 0);
+                    this.init();
+                } else {
+                    console.log("Error! Invalid skin file");
+                }
+            };
+            img.src = event.target.result;
+        };
+        reader.readAsDataURL(e[0]);
+    };
+
     loadPreset = (skin) => {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
         let img = new Image();
         img.onload = () => {
             this.ctx.drawImage(img, 0, 0);
@@ -936,6 +932,7 @@ export default class App extends Component {
     };
 
     fromScratch = () => {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         if (this.state.menu) {
             this.closeMenu();
         }
@@ -989,7 +986,6 @@ export default class App extends Component {
                     <FontAwesomeIcon className="tool" icon={faLayerGroup} size="2x"/>
                 </div>
 
-
                 <div className="colors">
                     <div onClick={this.colorSelect} ref="slot0" slot='0'
                          className={"color-select" + (this.state.colorSlot === 0 ? ' cs-selected' : '')}
@@ -1014,7 +1010,7 @@ export default class App extends Component {
                 </div>
 
                 <Pallet colorSlot={this.state.colorSlot} colorSelect={this.changeColorSlot} colorSelectCustom={this.changeColorSlotCustom} closePallet={this.closePallet} pallet={this.state.pallet}/>
-                <Menu fromScratch={this.fromScratch} setAlex={this.setAlex} loadImage={this.loadImage} closeMenu={this.closeMenu} menu={this.state.menu} canvasAccess={(c) => { this.canvas = c; } }/>
+                <Menu loadFromDrop={this.loadImageFromDrop} fromScratch={this.fromScratch} setAlex={this.setAlex} loadImage={this.loadImage} closeMenu={this.closeMenu} menu={this.state.menu} canvasAccess={(c) => { this.canvas = c; } }/>
                 <Parts part={this.state.part} full={this.showFull} head={this.showHead} chest={this.showChest} leftArm={this.showLeftArm} rightArm={this.showRightArm} leftLeg={this.showLeftLeg} rightLeg={this.showRightLeg}/>
             </div>
         );
