@@ -1,34 +1,58 @@
 import React, {Component} from 'react';
 import bg2 from './img/bg2.png';
 import bg from './img/bg.png';
-import skin from './img/skin.png';
+import steve from './img/skin.png';
+import alex from './img/alex.png';
 import './App.css';
 import * as THREE from "three";
 import Pallet from './components/Pallet.js';
+import Menu from './components/Menu.js';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome'
-import {faPen, faEraser, faSync, faLayerGroup, faEyeDropper} from '@fortawesome/free-solid-svg-icons'
+import {faPen, faEraser, faSync, faLayerGroup, faEyeDropper, faFill, faFileExport} from '@fortawesome/free-solid-svg-icons'
+import Parts from "./components/Parts";
 
 export default class App extends Component {
 
     scene = null;
-    pixels = [];
+    textures = [];
     canvas = null;
     ctx = null;
+
+    // Double Click
     clickDelay = 0;
+    lastClicked = -1;
+
     mouse = null;
     drawing = false;
     dragging = false;
+
+    head = null;
+    headOuter = null;
+    chest = null;
+    chestOuter = null;
+    armL = null;
+    armLOuter = null;
+    armR = null;
+    armROuter = null;
+    legL = null;
+    legLOuter = null;
+    legR = null;
+    legROuter = null;
+
+    offsets = [];
 
     colors = ['#f44336', '#2196F3',
         '#4CAF50', '#FFEB3B', "#FF9800", "#9C27B0"];
 
     state = {
-        mode: 0, // 0 - pencil, 1 - eraser, 2 - rotate
+        mode: 0, // 0 - pencil, 1 - eraser, 2 - rotate, 3 - eye drop, 4 - fill
         colorSlot: 0,
         ctx: null,
         outer: true,
         part: -1, // 0 - head, 1 - chest, 2 - left arm, 3 - right arm, 4 - left leg, 5 - right leg,
-        pallet: false
+        pallet: false,
+        menu: false,
+        isAlex: false
     };
 
     touchDevice = (navigator.maxTouchPoints || 'ontouchstart' in document.documentElement);
@@ -36,16 +60,16 @@ export default class App extends Component {
 
     componentDidMount() {
         this.scene = new THREE.Scene();
-        var camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.1, 1000);
+        let camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.1, 1000);
         camera.position.z = 32;
 
-        var renderer = new THREE.WebGLRenderer();
+        let renderer = new THREE.WebGLRenderer({ logarithmicDepthBuffer: true, antialias: true });
 
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        var OrbitControls = require('three-orbit-controls')(THREE);
-        var controls = new OrbitControls(camera, renderer.domElement);
+        let OrbitControls = require('three-orbit-controls')(THREE);
+        let controls = new OrbitControls(camera, renderer.domElement);
         controls.enablePan = false;
         controls.enableZoom = true;
 
@@ -61,833 +85,10 @@ export default class App extends Component {
         this.mouse = new THREE.Vector2(); // create once
         this.mouse.x = -100;
 
-        var light = new THREE.AmbientLight(0x00ff00); // soft white light
-        this.scene.add(light);
-
-        // All the geometry in one render  object
-        let geometry = new THREE.Geometry();
-
-        let init = () => {
-            for (let i = 0; i < 64; i++) {
-                this.pixels[i] = [0];
-                for (let j = 0; j < 64; j++) {
-                    this.pixels[i][j] = 0;
-                }
-            }
-
-            // So No Head?
-            for (let i = 0; i < 8; i++) {
-                for (let j = 0; j < 8; j++) {
-                    for (let k = 0; k < 8; k++) {
-                        if ((i === 0 || i === 7) || (j === 0 || j === 7) || (k === 0 || k === 7)) {
-                            let geo = new THREE.CubeGeometry(1, 1, 1);
-                            let cube = new THREE.Mesh(geo, [new THREE.MeshBasicMaterial({
-                                color: 0xffffff,
-                                vertexColors: THREE.FaceColors
-                            }), new THREE.MeshBasicMaterial({
-                                color: 0xffffff,
-                                vertexColors: THREE.FaceColors,
-                                transparent: true,
-                                opacity: 0
-                            })]);
-                            if (this.state.part === 0) {
-                                cube.position.set(i - 4, j - 4, k - 4);
-                            } else if (this.state.part === -1) {
-                                cube.position.set(i - 4, j - 4 + 16, k - 4);
-                            }
-                            geometry.merge(geo);
-
-                            let geo2 = new THREE.CubeGeometry(1.1, 1.1, 1.1);
-                            let cube2 = new THREE.Mesh(geo2, [new THREE.MeshBasicMaterial({
-                                color: 0xffffff,
-                                vertexColors: THREE.FaceColors,
-                                transparent: false
-                            }), new THREE.MeshBasicMaterial({
-                                color: 0xffffff,
-                                vertexColors: THREE.BackSide,
-                                transparent: true,
-                                opacity: 0.1
-                            }), new THREE.MeshBasicMaterial({
-                                color: 0xffffff,
-                                vertexColors: THREE.FaceColors,
-                                transparent: true,
-                                opacity: 0
-                            })]);
-                            geometry.merge(geo2);
-
-                            if (this.state.part === 0) {
-                                cube2.position.set(i - 4, j - 4, k - 4);
-                            } else if (this.state.part === -1) {
-                                cube2.position.set(i - 4, j - 4 + 16, k - 4);
-                            }
-
-                            for (let i = 0; i < cube.geometry.faces.length; i++) {
-                                cube.geometry.faces[i].materialIndex = 1;
-                                cube2.geometry.faces[i].materialIndex = 2;
-                            }
-
-                            if (k === 7) { // Creating face pixels
-                                this.pixels[i + 8][7 + (8 - j)] = {
-                                    cube: cube,
-                                    side: 8,
-                                    hasColor: true,
-                                    external: false,
-                                    part: 0
-                                };
-                                this.pixels[i + 8 + 32][7 + (8 - j)] = {
-                                    cube: cube2,
-                                    side: 8,
-                                    hasColor: false,
-                                    external: true,
-                                    part: 0
-                                };
-                            }
-                            if (k === 0) { // Creating back of head pixels
-                                this.pixels[7 + (24 - i)][7 + (8 - j)] = {
-                                    cube: cube,
-                                    side: 10,
-                                    hasColor: true,
-                                    external: false,
-                                    part: 0
-                                };
-                                this.pixels[7 + (24 - i) + 32][7 + (8 - j)] = {
-                                    cube: cube2,
-                                    side: 10,
-                                    hasColor: false,
-                                    external: true,
-                                    part: 0
-                                };
-                            }
-                            if (i === 0) { // Creating left head pixels
-                                this.pixels[k][7 + (8 - j)] = {cube: cube, side: 2, hasColor: true, external: false, part: 0};
-                                this.pixels[k + 32][7 + (8 - j)] = {
-                                    cube: cube2,
-                                    side: 2,
-                                    hasColor: false,
-                                    external: true,
-                                    part: 0
-                                };
-                            }
-                            if (i === 7) { // Creating right head pixels
-                                this.pixels[7 + (16 - k)][7 + (8 - j)] = {
-                                    cube: cube,
-                                    side: 0,
-                                    hasColor: true,
-                                    external: false,
-                                    part: 0
-                                };
-                                this.pixels[7 + (16 - k) + 32][7 + (8 - j)] = {
-                                    cube: cube2,
-                                    side: 0,
-                                    hasColor: false,
-                                    external: true,
-                                    part: 0
-                                };
-                            }
-                            if (j === 0) { // Creating bottom head pixels
-                                this.pixels[16 + i][7 - k] = {cube: cube, side: 6, hasColor: true, external: false, part: 0};
-                                this.pixels[16 + i + 32][7 - k] = {
-                                    cube: cube2,
-                                    side: 6,
-                                    hasColor: false,
-                                    external: true,
-                                    part: 0
-                                };
-                            }
-                            if (j === 7) { // Creating top head pixels
-                                this.pixels[i + 8][k] = {cube: cube, side: 4, hasColor: true, external: false,
-                                    part: 0};
-                                this.pixels[i + 8 + 32][k] = {cube: cube2, side: 4, hasColor: false, external: true,
-                                    part: 0};
-                            }
-
-                            this.scene.add(cube);
-                            this.scene.add(cube2);
-
-                            cube.geometry.colorsNeedUpdate = true;
-                            cube.geometry.groupsNeedUpdate = true;
-
-                            cube2.geometry.colorsNeedUpdate = true;
-                            cube2.geometry.groupsNeedUpdate = true;
-                        }
-                    }
-                }
-            }
-
-            // Chest machine
-            for (let i = 0; i < 8; i++) {
-                for (let j = 0; j < 12; j++) {
-                    for (let k = 0; k < 4; k++) {
-                        if ((i === 0 || i === 7) || (j === 0 || j === 11) || (k === 0 || k === 3)) {
-                            let geo = new THREE.CubeGeometry(1, 1, 1);
-                            let cube = new THREE.Mesh(geo, [new THREE.MeshBasicMaterial({
-                                color: 0xffffff,
-                                vertexColors: THREE.FaceColors
-                            }), new THREE.MeshBasicMaterial({
-                                color: 0xffffff,
-                                vertexColors: THREE.FaceColors,
-                                transparent: true,
-                                opacity: 0
-                            })]);
-                            if (this.state.part === 1) {
-                                cube.position.set(i - 4, j - 4, k - 4 + 2);
-                            } else if (this.state.part === -1) {
-                                cube.position.set(i - 4, j, k - 4 + 2);
-                            }
-                            geometry.merge(geo);
-
-                            let geo2 = new THREE.CubeGeometry(1.1, 1.1, 1.1);
-                            let cube2 = new THREE.Mesh(geo2, [new THREE.MeshBasicMaterial({
-                                color: 0xffffff,
-                                vertexColors: THREE.FaceColors,
-                                transparent: false
-                            }), new THREE.MeshBasicMaterial({
-                                color: 0xffffff,
-                                vertexColors: THREE.FaceColors,
-                                transparent: true,
-                                opacity: 0.1
-                            }), new THREE.MeshBasicMaterial({
-                                color: 0xffffff,
-                                vertexColors: THREE.FaceColors,
-                                transparent: true,
-                                opacity: 0
-                            })]);
-                            if (this.state.part === 1) {
-                                cube2.position.set(i - 4, j - 4, k - 4 + 2);
-                            } else if (this.state.part === -1) {
-                                cube2.position.set(i - 4, j - 4 + 4, k - 4 + 2);
-                            }
-                            geometry.merge(geo2);
-
-                            for (let i = 0; i < cube.geometry.faces.length; i++) {
-                                cube.geometry.faces[i].materialIndex = 1;
-                                cube2.geometry.faces[i].materialIndex = 2;
-                            }
-
-                            if (k === 3) { // front
-                                this.pixels[i + 20][11 + (20 - j)] = {
-                                    cube: cube,
-                                    side: 8,
-                                    hasColor: true,
-                                    external: false
-                                };
-                                this.pixels[i + 20][11 + (36 - j)] = {
-                                    cube: cube2,
-                                    side: 8,
-                                    hasColor: false,
-                                    external: true
-                                };
-                            }
-                            if (k === 0) { // back
-                                this.pixels[i + 32][11 + (20 - j)] = {
-                                    cube: cube,
-                                    side: 10,
-                                    hasColor: true,
-                                    external: false
-                                };
-                                this.pixels[i + 32][11 + (36 - j)] = {
-                                    cube: cube2,
-                                    side: 10,
-                                    hasColor: false,
-                                    external: true
-                                };
-                            }
-                            if (i === 0) { // left
-                                this.pixels[k + 28][11 + (20 - j)] = {
-                                    cube: cube,
-                                    side: 2,
-                                    hasColor: true,
-                                    external: false
-                                };
-                                this.pixels[k + 28][11 + (36 - j)] = {
-                                    cube: cube2,
-                                    side: 2,
-                                    hasColor: false,
-                                    external: true
-                                };
-                            }
-
-                            if (i === 7) { // right
-                                this.pixels[3 + (16 - k)][11 + (20 - j)] = {
-                                    cube: cube,
-                                    side: 0,
-                                    hasColor: true,
-                                    external: false
-                                };
-                                this.pixels[3 + (16 - k)][11 + (36 - j)] = {
-                                    cube: cube2,
-                                    side: 0,
-                                    hasColor: false,
-                                    external: true
-                                };
-                            }
-
-                            if (j === 0) { // bottom body
-                                this.pixels[28 + i][16 + k] = {cube: cube, side: 6, hasColor: true, external: false};
-                                this.pixels[28 + i][32 + k] = {cube: cube2, side: 6, hasColor: false, external: true};
-                            }
-
-                            if (j === 11) { // top body
-                                this.pixels[i + 20][k + 16] = {cube: cube, side: 4, hasColor: true, external: false};
-                                this.pixels[i + 20][k + 32] = {cube: cube2, side: 4, hasColor: false, external: true};
-                            }
-
-                            this.scene.add(cube);
-                            this.scene.add(cube2);
-
-                            cube.geometry.colorsNeedUpdate = true;
-                            cube.geometry.groupsNeedUpdate = true;
-
-                            cube2.geometry.colorsNeedUpdate = true;
-                            cube2.geometry.groupsNeedUpdate = true;
-                        }
-                    }
-                }
-            }
-
-            // Left arm baby
-            for (let i = 0; i < 4; i++) {
-                for (let j = 0; j < 12; j++) {
-                    for (let k = 0; k < 4; k++) {
-                        if ((i === 0 || i === 3) || (j === 0 || j === 11) || (k === 0 || k === 3)) {
-                            let geo = new THREE.CubeGeometry(1, 1, 1);
-                            let cube = new THREE.Mesh(geo, [new THREE.MeshBasicMaterial({
-                                color: 0xffffff,
-                                vertexColors: THREE.FaceColors
-                            }), new THREE.MeshBasicMaterial({
-                                color: 0xffffff,
-                                vertexColors: THREE.FaceColors,
-                                transparent: true,
-                                opacity: 0
-                            })]);
-                            if (this.state.part === 2) {
-                                cube.position.set(i - 2, j - 6, k - 2);
-                            } else if (this.state.part === -1) {
-                                cube.position.set(i - 8, j, k - 2);
-                            }
-                            geometry.merge(geo);
-
-                            let geo2 = new THREE.CubeGeometry(1.1, 1.1, 1.1);
-                            let cube2 = new THREE.Mesh(geo2, [new THREE.MeshBasicMaterial({
-                                color: 0xffffff,
-                                vertexColors: THREE.FaceColors,
-                                transparent: false
-                            }), new THREE.MeshBasicMaterial({
-                                color: 0xffffff,
-                                vertexColors: THREE.FaceColors,
-                                transparent: true,
-                                opacity: 0.1
-                            }), new THREE.MeshBasicMaterial({
-                                color: 0xffffff,
-                                vertexColors: THREE.FaceColors,
-                                transparent: true,
-                                opacity: 0
-                            })]);
-                            if (this.state.part === 2) {
-                                cube2.position.set(i - 2, j - 6, k - 2);
-                            } else if (this.state.part === -1) {
-                                cube2.position.set(i - 8, j, k - 2);
-                            }
-                            geometry.merge(geo2);
-
-                            for (let i = 0; i < cube.geometry.faces.length; i++) {
-                                cube.geometry.faces[i].materialIndex = 1;
-                                cube2.geometry.faces[i].materialIndex = 2;
-                            }
-
-                            if (k === 3) { // front
-                                this.pixels[i + 36][11 + (52 - j)] = {
-                                    cube: cube,
-                                    side: 8,
-                                    hasColor: true,
-                                    external: false
-                                };
-                                this.pixels[i + 52][11 + (52 - j)] = {
-                                    cube: cube2,
-                                    side: 8,
-                                    hasColor: false,
-                                    external: true
-                                };
-                            }
-                            if (k === 0) { // back
-                                this.pixels[i + 44][11 + (52 - j)] = {
-                                    cube: cube,
-                                    side: 10,
-                                    hasColor: true,
-                                    external: false
-                                };
-                                this.pixels[i + 60][11 + (52 - j)] = {
-                                    cube: cube2,
-                                    side: 10,
-                                    hasColor: false,
-                                    external: true
-                                };
-                            }
-                            if (i === 0) { // left
-                                this.pixels[k + 40][11 + (52 - j)] = {
-                                    cube: cube,
-                                    side: 2,
-                                    hasColor: true,
-                                    external: false
-                                };
-                                this.pixels[k + 56][11 + (52 - j)] = {
-                                    cube: cube2,
-                                    side: 2,
-                                    hasColor: false,
-                                    external: true
-                                };
-                            }
-
-                            if (i === 3) { // right
-                                this.pixels[3 + (32 - k)][11 + (52 - j)] = {
-                                    cube: cube,
-                                    side: 0,
-                                    hasColor: true,
-                                    external: false
-                                };
-                                this.pixels[3 + (48 - k)][11 + (52 - j)] = {
-                                    cube: cube2,
-                                    side: 0,
-                                    hasColor: false,
-                                    external: true
-                                };
-                            }
-
-                            if (j === 0) { // bottom
-                                this.pixels[40 + i][48 + k] = {cube: cube, side: 6, hasColor: true, external: false};
-                                this.pixels[56 + i][48 + k] = {cube: cube2, side: 6, hasColor: false, external: true};
-                            }
-
-                            if (j === 11) { // top
-                                this.pixels[i + 36][k + 48] = {cube: cube, side: 4, hasColor: true, external: false};
-                                this.pixels[i + 52][k + 48] = {cube: cube2, side: 4, hasColor: false, external: true};
-                            }
-
-                            this.scene.add(cube);
-                            this.scene.add(cube2);
-
-                            cube.geometry.colorsNeedUpdate = true;
-                            cube.geometry.groupsNeedUpdate = true;
-
-                            cube2.geometry.colorsNeedUpdate = true;
-                            cube2.geometry.groupsNeedUpdate = true;
-                        }
-                    }
-                }
-            }
-
-            // Beat off arm
-            for (let i = 0; i < 4; i++) {
-                for (let j = 0; j < 12; j++) {
-                    for (let k = 0; k < 4; k++) {
-                        if ((i === 0 || i === 3) || (j === 0 || j === 11) || (k === 0 || k === 3)) {
-                            let geo = new THREE.CubeGeometry(1, 1, 1);
-                            let cube = new THREE.Mesh(geo, [new THREE.MeshBasicMaterial({
-                                color: 0xffffff,
-                                vertexColors: THREE.FaceColors
-                            }), new THREE.MeshBasicMaterial({
-                                color: 0xffffff,
-                                vertexColors: THREE.FaceColors,
-                                transparent: true,
-                                opacity: 0
-                            })]);
-                            if (this.state.part === 3) {
-                                cube.position.set(i - 2, j - 6, k - 2);
-                            } else if (this.state.part === -1) {
-                                cube.position.set(i + 4, j, k - 2);
-                            }
-                            geometry.merge(geo);
-
-                            let geo2 = new THREE.CubeGeometry(1.1, 1.1, 1.1);
-                            let cube2 = new THREE.Mesh(geo2, [new THREE.MeshBasicMaterial({
-                                color: 0xffffff,
-                                vertexColors: THREE.FaceColors,
-                                transparent: false
-                            }), new THREE.MeshBasicMaterial({
-                                color: 0xffffff,
-                                vertexColors: THREE.FaceColors,
-                                transparent: true,
-                                opacity: 0.1
-                            }), new THREE.MeshBasicMaterial({
-                                color: 0xffffff,
-                                vertexColors: THREE.FaceColors,
-                                transparent: true,
-                                opacity: 0
-                            })]);
-                            if (this.state.part === 3) {
-                                cube2.position.set(i - 2, j - 6, k - 2);
-                            } else if (this.state.part === -1) {
-                                cube2.position.set(i + 4, j, k - 2);
-                            }
-                            geometry.merge(geo2);
-
-                            for (let i = 0; i < cube.geometry.faces.length; i++) {
-                                cube.geometry.faces[i].materialIndex = 1;
-                                cube2.geometry.faces[i].materialIndex = 2;
-                            }
-
-                            if (k === 3) { // front
-                                this.pixels[i + 44][11 + (20 - j)] = {
-                                    cube: cube,
-                                    side: 8,
-                                    hasColor: true,
-                                    external: false
-                                };
-                                this.pixels[i + 44][11 + (36 - j)] = {
-                                    cube: cube2,
-                                    side: 8,
-                                    hasColor: false,
-                                    external: true
-                                };
-                            }
-                            if (k === 0) { // back
-                                this.pixels[i + 52][11 + (20 - j)] = {
-                                    cube: cube,
-                                    side: 10,
-                                    hasColor: true,
-                                    external: false
-                                };
-                                this.pixels[i + 52][11 + (36 - j)] = {
-                                    cube: cube2,
-                                    side: 10,
-                                    hasColor: false,
-                                    external: true
-                                };
-                            }
-                            if (i === 0) { // left
-                                this.pixels[k + 48][11 + (20 - j)] = {
-                                    cube: cube,
-                                    side: 2,
-                                    hasColor: true,
-                                    external: false
-                                };
-                                this.pixels[k + 48][11 + (36 - j)] = {
-                                    cube: cube2,
-                                    side: 2,
-                                    hasColor: false,
-                                    external: true
-                                };
-                            }
-
-                            if (i === 3) { // right
-                                this.pixels[3 + (40 - k)][11 + (20 - j)] = {
-                                    cube: cube,
-                                    side: 0,
-                                    hasColor: true,
-                                    external: false
-                                };
-                                this.pixels[3 + (40 - k)][11 + (36 - j)] = {
-                                    cube: cube2,
-                                    side: 0,
-                                    hasColor: false,
-                                    external: true
-                                };
-                            }
-
-                            if (j === 0) { // bottom body
-                                this.pixels[48 + i][16 + k] = {cube: cube, side: 6, hasColor: true, external: false};
-                                this.pixels[48 + i][32 + k] = {cube: cube2, side: 6, hasColor: false, external: true};
-                            }
-
-                            if (j === 11) { // top body
-                                this.pixels[i + 44][k + 16] = {cube: cube, side: 4, hasColor: true, external: false};
-                                this.pixels[i + 44][k + 32] = {cube: cube2, side: 4, hasColor: false, external: true};
-                            }
-
-                            this.scene.add(cube);
-                            this.scene.add(cube2);
-
-                            cube.geometry.colorsNeedUpdate = true;
-                            cube.geometry.groupsNeedUpdate = true;
-
-                            cube2.geometry.colorsNeedUpdate = true;
-                            cube2.geometry.groupsNeedUpdate = true;
-                        }
-                    }
-                }
-            }
-
-            // Left leg
-            for (let i = 0; i < 4; i++) {
-                for (let j = 0; j < 12; j++) {
-                    for (let k = 0; k < 4; k++) {
-                        if ((i === 0 || i === 3) || (j === 0 || j === 11) || (k === 0 || k === 3)) {
-                            let geo = new THREE.CubeGeometry(1, 1, 1);
-                            let cube = new THREE.Mesh(geo, [new THREE.MeshBasicMaterial({
-                                color: 0xffffff,
-                                vertexColors: THREE.FaceColors
-                            }), new THREE.MeshBasicMaterial({
-                                color: 0xffffff,
-                                vertexColors: THREE.FaceColors,
-                                transparent: true,
-                                opacity: 0
-                            })]);
-                            if (this.state.part === 4) {
-                                cube.position.set(i - 2, j - 6, k - 2);
-                            } else if (this.state.part === -1) {
-                                cube.position.set(i - 4, j - 12, k - 2);
-                            }
-                            geometry.merge(geo);
-
-                            let geo2 = new THREE.CubeGeometry(1.1, 1.1, 1.1);
-                            let cube2 = new THREE.Mesh(geo2, [new THREE.MeshBasicMaterial({
-                                color: 0xffffff,
-                                vertexColors: THREE.FaceColors,
-                                transparent: false
-                            }), new THREE.MeshBasicMaterial({
-                                color: 0xffffff,
-                                vertexColors: THREE.FaceColors,
-                                transparent: true,
-                                opacity: 0.1
-                            }), new THREE.MeshBasicMaterial({
-                                color: 0xffffff,
-                                vertexColors: THREE.FaceColors,
-                                transparent: true,
-                                opacity: 0
-                            })]);
-                            if (this.state.part === 4) {
-                                cube2.position.set(i - 2, j - 6, k - 2);
-                            } else if (this.state.part === -1) {
-                                cube2.position.set(i - 4, j - 12, k - 2);
-                            }
-                            geometry.merge(geo2);
-
-                            for (let i = 0; i < cube.geometry.faces.length; i++) {
-                                cube.geometry.faces[i].materialIndex = 1;
-                                cube2.geometry.faces[i].materialIndex = 2;
-                            }
-
-                            if (k === 3) { // front
-                                this.pixels[i + 20][11 + (52 - j)] = {
-                                    cube: cube,
-                                    side: 8,
-                                    hasColor: true,
-                                    external: false
-                                };
-                                this.pixels[i + 4][11 + (52 - j)] = {
-                                    cube: cube2,
-                                    side: 8,
-                                    hasColor: false,
-                                    external: true
-                                };
-                            }
-                            if (k === 0) { // back
-                                this.pixels[i + 28][11 + (52 - j)] = {
-                                    cube: cube,
-                                    side: 10,
-                                    hasColor: true,
-                                    external: false
-                                };
-                                this.pixels[i + 12][11 + (52 - j)] = {
-                                    cube: cube2,
-                                    side: 10,
-                                    hasColor: false,
-                                    external: true
-                                };
-                            }
-                            if (i === 0) { // left
-                                this.pixels[k + 24][11 + (52 - j)] = {
-                                    cube: cube,
-                                    side: 2,
-                                    hasColor: true,
-                                    external: false
-                                };
-                                this.pixels[k + 8][11 + (52 - j)] = {
-                                    cube: cube2,
-                                    side: 2,
-                                    hasColor: false,
-                                    external: true
-                                };
-                            }
-
-                            if (i === 3) { // right
-                                this.pixels[3 + (16 - k)][11 + (52 - j)] = {
-                                    cube: cube,
-                                    side: 0,
-                                    hasColor: true,
-                                    external: false
-                                };
-                                this.pixels[3 + (-k)][11 + (52 - j)] = {
-                                    cube: cube2,
-                                    side: 0,
-                                    hasColor: false,
-                                    external: true
-                                };
-                            }
-
-                            if (j === 0) { // bottom body
-                                this.pixels[24 + i][48 + k] = {cube: cube, side: 6, hasColor: true, external: false};
-                                this.pixels[8 + i][48 + k] = {cube: cube2, side: 6, hasColor: false, external: true};
-                            }
-
-                            if (j === 11) { // top body
-                                this.pixels[i + 20][k + 48] = {cube: cube, side: 4, hasColor: true, external: false};
-                                this.pixels[i + 4][k + 48] = {cube: cube2, side: 4, hasColor: false, external: true};
-                            }
-
-                            this.scene.add(cube);
-                            this.scene.add(cube2);
-
-                            cube.geometry.colorsNeedUpdate = true;
-                            cube.geometry.groupsNeedUpdate = true;
-
-                            cube2.geometry.colorsNeedUpdate = true;
-                            cube2.geometry.groupsNeedUpdate = true;
-                        }
-                    }
-                }
-            }
-
-            // Right leg
-            for (let i = 0; i < 4; i++) {
-                for (let j = 0; j < 12; j++) {
-                    for (let k = 0; k < 4; k++) {
-                        if ((i === 0 || i === 3) || (j === 0 || j === 11) || (k === 0 || k === 3)) {
-                            let geo = new THREE.CubeGeometry(1, 1, 1);
-                            let cube = new THREE.Mesh(geo, [new THREE.MeshBasicMaterial({
-                                color: 0xffffff,
-                                vertexColors: THREE.FaceColors
-                            }), new THREE.MeshBasicMaterial({
-                                color: 0xffffff,
-                                vertexColors: THREE.FaceColors,
-                                transparent: true,
-                                opacity: 0
-                            })]);
-                            if (this.state.part === 5){
-                                cube.position.set(i - 2 , j - 6, k - 2);
-                            } else if (this.state.part === -1) {
-                                cube.position.set(i, j - 12, k - 2);
-                            }
-                            geometry.merge(geo);
-                            let geo2 = new THREE.CubeGeometry(1.1, 1.1, 1.1);
-                            let cube2 = new THREE.Mesh(geo2, [new THREE.MeshBasicMaterial({
-                                color: 0xffffff,
-                                vertexColors: THREE.FaceColors,
-                                transparent: false
-                            }), new THREE.MeshBasicMaterial({
-                                color: 0xffffff,
-                                vertexColors: THREE.FaceColors,
-                                transparent: true,
-                                opacity: 0.1
-                            }), new THREE.MeshBasicMaterial({
-                                color: 0xffffff,
-                                vertexColors: THREE.FaceColors,
-                                transparent: true,
-                                opacity: 0
-                            })]);
-                            if (this.state.part === 5){
-                                cube2.position.set(i - 2 , j - 6, k - 2);
-                            } else if (this.state.part === -1) {
-                                cube2.position.set(i, j - 12, k - 2);
-                            }
-                            geometry.merge(geo2);
-
-                            for (let i = 0; i < cube.geometry.faces.length; i++) {
-                                cube.geometry.faces[i].materialIndex = 1;
-                                cube2.geometry.faces[i].materialIndex = 2;
-                            }
-
-                            if (k === 3) { // front
-                                this.pixels[i + 4][11 + (20 - j)] = {
-                                    cube: cube,
-                                    side: 8,
-                                    hasColor: true,
-                                    external: false
-                                };
-                                this.pixels[i + 4][11 + (36 - j)] = {
-                                    cube: cube2,
-                                    side: 8,
-                                    hasColor: false,
-                                    external: true
-                                };
-                            }
-                            if (k === 0) { // back
-                                this.pixels[i + 12][11 + (20 - j)] = {
-                                    cube: cube,
-                                    side: 10,
-                                    hasColor: true,
-                                    external: false
-                                };
-                                this.pixels[i + 12][11 + (36 - j)] = {
-                                    cube: cube2,
-                                    side: 10,
-                                    hasColor: false,
-                                    external: true
-                                };
-                            }
-                            if (i === 0) { // left
-                                this.pixels[k + 8][11 + (20 - j)] = {
-                                    cube: cube,
-                                    side: 2,
-                                    hasColor: true,
-                                    external: false
-                                };
-                                this.pixels[k + 8][11 + (36 - j)] = {
-                                    cube: cube2,
-                                    side: 2,
-                                    hasColor: false,
-                                    external: true
-                                };
-                            }
-
-                            if (i === 3) { // right
-                                this.pixels[3 + (-k)][11 + (20 - j)] = {
-                                    cube: cube,
-                                    side: 0,
-                                    hasColor: true,
-                                    external: false
-                                };
-                                this.pixels[3 + (-k)][11 + (36 - j)] = {
-                                    cube: cube2,
-                                    side: 0,
-                                    hasColor: false,
-                                    external: true
-                                };
-                            }
-
-                            if (j === 0) { // bottom
-                                this.pixels[8 + i][16 + k] = {cube: cube, side: 6, hasColor: true, external: false};
-                                this.pixels[8 + i][32 + k] = {cube: cube2, side: 6, hasColor: false, external: true};
-                            }
-
-                            if (j === 11) { // top
-                                this.pixels[i + 4][k + 16] = {cube: cube, side: 4, hasColor: true, external: false};
-                                this.pixels[i + 4][k + 32] = {cube: cube2, side: 4, hasColor: false, external: true};
-                            }
-
-                            this.scene.add(cube);
-                            this.scene.add(cube2);
-
-                            cube.geometry.colorsNeedUpdate = true;
-                            cube.geometry.groupsNeedUpdate = true;
-
-                            cube2.geometry.colorsNeedUpdate = true;
-                            cube2.geometry.groupsNeedUpdate = true;
-                        }
-                    }
-                }
-            }
-            start();
-        };
+        this.ctx = this.canvas.getContext("2d");
 
         let start = () => {
-            let {pixels} = this;
-
-            for (let i = 0; i < pixels.length; i++) {
-                for (let j = 0; j < pixels[i].length; j++) {
-                    if (pixels[i][j] !== 0) {
-                        if (!pixels[i][j].external) { // Inner
-                                pixels[i][j].cube.geometry.faces[pixels[i][j].side].materialIndex = 0;
-                                pixels[i][j].cube.geometry.faces[pixels[i][j].side + 1].materialIndex = 0;
-                        } else { // Outer
-                                pixels[i][j].cube.geometry.faces[pixels[i][j].side].materialIndex = 1;
-                                pixels[i][j].cube.geometry.faces[pixels[i][j].side + 1].materialIndex = 1;
-                        }
-                        pixels[i][j].cube.geometry.colorsNeedUpdate = true;
-                        pixels[i][j].cube.geometry.groupsNeedUpdate = true;
-                    }
-                }
-            }
+            this.ctx.fillStyle = this.colors[this.state.colorSlot];
 
             document.addEventListener('mousemove', (e) => {
                 this.mouse.x = (e.clientX / renderer.domElement.clientWidth) * 2 - 1;
@@ -912,6 +113,7 @@ export default class App extends Component {
                 });
             }
 
+            this.loadPreset(steve);
             animate();
         };
 
@@ -922,6 +124,10 @@ export default class App extends Component {
             controls.update();
             renderer.render(this.scene, camera);
 
+            for (let t = 0; t < this.textures.length; t++) {
+                this.textures[t].needsUpdate = true;
+            }
+
             update();
         };
 
@@ -929,15 +135,22 @@ export default class App extends Component {
             let {colorSlot, mode, outer} = this.state;
             raycaster.setFromCamera(this.mouse, camera);
             let intersects = raycaster.intersectObjects(this.scene.children);
-
+            this.ctx.fillStyle = this.colors[this.state.colorSlot];
             switch (mode) {
+                case -1:
+                    controls.enabled = false;
+                    break;
                 case 0: // Pencil
                     if (!this.touchDevice && !this.mouseDown) {
                         break;
                     }
 
-                    if (!this.touchDevice && this.dragging && !this.drawing) {
-                        controls.enabled = true;
+                    if (!this.touchDevice) {
+                        if (this.dragging && !this.drawing) {
+                            controls.enabled = true;
+                        }
+                    } else {
+                        controls.enabled = false;
                     }
 
                     if (intersects.length > 0 && !this.dragging) {
@@ -946,20 +159,33 @@ export default class App extends Component {
                             this.dragging = false;
                             this.drawing = true;
                         }
-                        let faceIndex = intersects[0].faceIndex;
-                        intersects[0].object.geometry.faces[faceIndex].color.set(new THREE.Color(this.colors[colorSlot]));
-                        intersects[0].object.geometry.faces[faceIndex].materialIndex = 0;
-                        if (faceIndex === 0 || (faceIndex % 2) === 0) {
-                            intersects[0].object.geometry.faces[faceIndex + 1].color.set(new THREE.Color(this.colors[colorSlot]));
-                            intersects[0].object.geometry.faces[faceIndex + 1].materialIndex = 0;
-                        } else {
-                            intersects[0].object.geometry.faces[faceIndex - 1].color.set(new THREE.Color(this.colors[colorSlot]));
-                            intersects[0].object.geometry.faces[faceIndex - 1].materialIndex = 0;
+                        let faceIndex = (intersects[0].faceIndex % 2 === 1 ? intersects[0].faceIndex - 1 : intersects[0].faceIndex) / 2;
+                        for (let i = 0; i < this.offsets.length; i++) {
+                            if (intersects[0].object === this.offsets[i].object) {
+                                switch (faceIndex) {
+                                    case 0: // left
+                                        this.ctx.fillRect(this.offsets[i].left.xOffset + Math.floor(intersects[0].uv.x * this.offsets[i].left.sizeX), this.offsets[i].left.yOffset + (this.offsets[i].left.sizeY-1)-Math.floor(intersects[0].uv.y *  this.offsets[i].left.sizeY), 1, 1);
+                                        break;
+                                    case 1: // right
+                                        this.ctx.fillRect(this.offsets[i].right.xOffset + Math.floor(intersects[0].uv.x * this.offsets[i].right.sizeX), this.offsets[i].right.yOffset  + (this.offsets[i].right.sizeY-1)-Math.floor(intersects[0].uv.y * this.offsets[i].right.sizeY), 1, 1);
+                                        break;
+                                    case 2: // top
+                                        this.ctx.fillRect(this.offsets[i].top.xOffset + Math.floor(intersects[0].uv.x * this.offsets[i].top.sizeX), this.offsets[i].top.yOffset + ((this.offsets[i].top.sizeY-1)-Math.floor(intersects[0].uv.y * this.offsets[i].top.sizeY)), 1, 1);
+                                        break;
+                                    case 3: // bot
+                                        this.ctx.fillRect(this.offsets[i].bot.xOffset + Math.floor(intersects[0].uv.x * this.offsets[i].bot.sizeX), this.offsets[i].bot.yOffset + Math.floor(intersects[0].uv.y * this.offsets[i].bot.sizeY), 1, 1);
+                                        break;
+                                    case 4: // front
+                                        this.ctx.fillRect(this.offsets[i].front.xOffset + Math.floor(intersects[0].uv.x * this.offsets[i].front.sizeX), this.offsets[i].front.yOffset + ((this.offsets[i].front.sizeY-1)-Math.floor(intersects[0].uv.y * this.offsets[i].front.sizeY)), 1, 1);
+                                        break;
+                                    case 5: // back
+                                        this.ctx.fillRect(this.offsets[i].back.xOffset + Math.floor(intersects[0].uv.x * this.offsets[i].back.sizeX), this.offsets[i].back.yOffset + ((this.offsets[i].back.sizeY-1)-Math.floor(intersects[0].uv.y * this.offsets[i].back.sizeY)), 1, 1);
+                                        break;
+                                }
+                                break;
+                            }
                         }
-                        intersects[0].object.geometry.colorsNeedUpdate = true;
-                        intersects[0].object.geometry.groupsNeedUpdate = true;
-                        this.setColored(intersects[0].object, faceIndex, true);
-                        this.updateSkinPreview();
+
                     } else {
                         if (!this.touchDevice && !this.drawing) {
                             this.dragging = true;
@@ -982,20 +208,32 @@ export default class App extends Component {
                                 this.dragging = false;
                                 this.drawing = true;
                             }
-                            let faceIndex = intersects[0].faceIndex;
-                            intersects[0].object.geometry.faces[faceIndex].color.set(new THREE.Color("white"));
-                            intersects[0].object.geometry.faces[faceIndex].materialIndex = 1;
-                            if (faceIndex === 0 || (faceIndex % 2) === 0) {
-                                intersects[0].object.geometry.faces[faceIndex + 1].color.set(new THREE.Color("white"));
-                                intersects[0].object.geometry.faces[faceIndex + 1].materialIndex = 1;
-                            } else {
-                                intersects[0].object.geometry.faces[faceIndex - 1].color.set(new THREE.Color("white"));
-                                intersects[0].object.geometry.faces[faceIndex - 1].materialIndex = 1;
+                            let faceIndex = (intersects[0].faceIndex % 2 === 1 ? intersects[0].faceIndex - 1 : intersects[0].faceIndex) / 2;
+                            for (let i = 0; i < this.offsets.length; i++) {
+                                if (intersects[0].object === this.offsets[i].object) {
+                                    switch (faceIndex) {
+                                        case 0: // left
+                                            this.ctx.clearRect(this.offsets[i].left.xOffset + ((this.offsets[i].left.sizeX-1)-Math.floor(intersects[0].uv.x * this.offsets[i].left.sizeX)), this.offsets[i].left.yOffset + (this.offsets[i].left.sizeY-1)-Math.floor(intersects[0].uv.y *  this.offsets[i].left.sizeY), 1, 1);
+                                            break;
+                                        case 1: // right
+                                            this.ctx.clearRect(this.offsets[i].right.xOffset + ((this.offsets[i].right.sizeX-1)-Math.floor(intersects[0].uv.x * this.offsets[i].right.sizeX)), this.offsets[i].right.yOffset  + (this.offsets[i].right.sizeY-1)-Math.floor(intersects[0].uv.y * this.offsets[i].right.sizeY), 1, 1);
+                                            break;
+                                        case 2: // top
+                                            this.ctx.clearRect(this.offsets[i].top.xOffset + Math.floor(intersects[0].uv.x * this.offsets[i].top.sizeX), this.offsets[i].top.yOffset + ((this.offsets[i].top.sizeY-1)-Math.floor(intersects[0].uv.y * this.offsets[i].top.sizeY)), 1, 1);
+                                            break;
+                                        case 3: // bot
+                                            this.ctx.clearRect(this.offsets[i].bot.xOffset + Math.floor(intersects[0].uv.x * this.offsets[i].bot.sizeX), this.offsets[i].bot.yOffset + Math.floor(intersects[0].uv.y * this.offsets[i].bot.sizeY), 1, 1);
+                                            break;
+                                        case 4: // front
+                                            this.ctx.clearRect(this.offsets[i].front.xOffset + Math.floor(intersects[0].uv.x * this.offsets[i].front.sizeX), this.offsets[i].front.yOffset + ((this.offsets[i].front.sizeY-1)-Math.floor(intersects[0].uv.y * this.offsets[i].front.sizeY)), 1, 1);
+                                            break;
+                                        case 5: // back
+                                            this.ctx.clearRect(this.offsets[i].back.xOffset + Math.floor(intersects[0].uv.x * this.offsets[i].back.sizeX), this.offsets[i].back.yOffset + ((this.offsets[i].back.sizeY-1)-Math.floor(intersects[0].uv.y * this.offsets[i].back.sizeY)), 1, 1);
+                                            break;
+                                    }
+                                    break;
+                                }
                             }
-                            intersects[0].object.geometry.colorsNeedUpdate = true;
-                            intersects[0].object.geometry.groupsNeedUpdate = true;
-                            this.setColored(intersects[0].object, faceIndex, false);
-                            this.updateSkinPreview();
                         } else {
                             if (!this.touchDevice && !this.drawing) {
                                 this.dragging = true;
@@ -1021,9 +259,35 @@ export default class App extends Component {
                             this.dragging = false;
                             this.drawing = true;
                         }
-                        let faceIndex = intersects[0].faceIndex;
-                        let c = intersects[0].object.geometry.faces[faceIndex].color;
-                        this.colors[colorSlot] = `rgb(${c.r * 255}, ${c.g * 255}, ${c.b * 255})`;
+                        let faceIndex = (intersects[0].faceIndex % 2 === 1 ? intersects[0].faceIndex - 1 : intersects[0].faceIndex) / 2;
+                        let p = null;
+                        for (let i = 0; i < this.offsets.length; i++) {
+                            if (intersects[0].object === this.offsets[i].object) {
+                                switch (faceIndex) {
+                                    case 0: // left
+                                        p = this.ctx.getImageData(this.offsets[i].left.xOffset + ((this.offsets[i].left.sizeX-1)-Math.floor(intersects[0].uv.x * this.offsets[i].left.sizeX)), this.offsets[i].left.yOffset + (this.offsets[i].left.sizeY-1)-Math.floor(intersects[0].uv.y *  this.offsets[i].left.sizeY), 1, 1).data
+                                        break;
+                                    case 1: // right
+                                        p = this.ctx.getImageData(this.offsets[i].right.xOffset + ((this.offsets[i].right.sizeX-1)-Math.floor(intersects[0].uv.x * this.offsets[i].right.sizeX)), this.offsets[i].right.yOffset  + (this.offsets[i].right.sizeY-1)-Math.floor(intersects[0].uv.y * this.offsets[i].right.sizeY), 1, 1).data;
+                                        break;
+                                    case 2: // top
+                                        p = this.ctx.getImageData(this.offsets[i].top.xOffset + Math.floor(intersects[0].uv.x * this.offsets[i].top.sizeX), this.offsets[i].top.yOffset + ((this.offsets[i].top.sizeY-1)-Math.floor(intersects[0].uv.y * this.offsets[i].top.sizeY)), 1, 1).data;
+                                        break;
+                                    case 3: // bot
+                                        p = this.ctx.getImageData(this.offsets[i].bot.xOffset + Math.floor(intersects[0].uv.x * this.offsets[i].bot.sizeX), this.offsets[i].bot.yOffset + Math.floor(intersects[0].uv.y * this.offsets[i].bot.sizeY), 1, 1).data;
+                                        break;
+                                    case 4: // front
+                                        p = this.ctx.getImageData(this.offsets[i].front.xOffset + Math.floor(intersects[0].uv.x * this.offsets[i].front.sizeX), this.offsets[i].front.yOffset + ((this.offsets[i].front.sizeY-1)-Math.floor(intersects[0].uv.y * this.offsets[i].front.sizeY)), 1, 1).data;
+                                        break;
+                                    case 5: // back
+                                        p = this.ctx.getImageData(this.offsets[i].back.xOffset + Math.floor(intersects[0].uv.x * this.offsets[i].back.sizeX), this.offsets[i].back.yOffset + ((this.offsets[i].back.sizeY-1)-Math.floor(intersects[0].uv.y * this.offsets[i].back.sizeY)), 1, 1).data;
+                                        break;
+                                }
+                                break;
+                            }
+                        }
+
+                        this.colors[colorSlot] = "#" + ("000000" + ((p[0] << 16) | (p[1] << 8) | p[2]).toString(16)).slice(-6);
                         this.updateColors();
                     } else {
                         if (!this.touchDevice && !this.drawing) {
@@ -1032,10 +296,62 @@ export default class App extends Component {
                     }
 
                     break;
+                case 4: // Bucket
+                    if (!this.touchDevice && !this.mouseDown) {
+                        break;
+                    }
+
+                    if (!this.touchDevice) {
+                        if (this.dragging && !this.drawing) {
+                            controls.enabled = true;
+                        }
+                    } else {
+                        controls.enabled = false;
+                    }
+
+                    if (intersects.length > 0 && !this.dragging) {
+                        controls.enabled = false;
+                        if (!this.touchDevice) {
+                            this.dragging = false;
+                            this.drawing = true;
+                        }
+                        let faceIndex = (intersects[0].faceIndex % 2 === 1 ? intersects[0].faceIndex - 1 : intersects[0].faceIndex) / 2;
+                        for (let i = 0; i < this.offsets.length; i++) {
+                            if (intersects[0].object === this.offsets[i].object) {
+                                switch (faceIndex) {
+                                    case 0: // left
+                                        this.ctx.fillRect(this.offsets[i].left.xOffset, this.offsets[i].left.yOffset, this.offsets[i].left.sizeX, this.offsets[i].left.sizeY);
+                                        break;
+                                    case 1: // right
+                                        this.ctx.fillRect(this.offsets[i].right.xOffset, this.offsets[i].right.yOffset, this.offsets[i].right.sizeX, this.offsets[i].right.sizeY);
+                                        break;
+                                    case 2: // top
+                                        this.ctx.fillRect(this.offsets[i].top.xOffset, this.offsets[i].top.yOffset, this.offsets[i].top.sizeX, this.offsets[i].top.sizeY);
+                                        break;
+                                    case 3: // bot
+                                        this.ctx.fillRect(this.offsets[i].bot.xOffset, this.offsets[i].bot.yOffset, this.offsets[i].bot.sizeX, this.offsets[i].bot.sizeY);
+                                        break;
+                                    case 4: // front
+                                        this.ctx.fillRect(this.offsets[i].front.xOffset, this.offsets[i].front.yOffset, this.offsets[i].front.sizeX, this.offsets[i].front.sizeY);
+                                        break;
+                                    case 5: // back
+                                        this.ctx.fillRect(this.offsets[i].back.xOffset, this.offsets[i].back.yOffset, this.offsets[i].back.sizeX, this.offsets[i].back.sizeY);
+                                        break;
+                                }
+                                break;
+                            }
+                        }
+
+                    } else {
+                        if (!this.touchDevice && !this.drawing) {
+                            this.dragging = true;
+                        }
+                    }
+                    break;
             }
         };
 
-        init();
+        start();
 
         // Double Click Handler
         setInterval(() => {
@@ -1044,75 +360,275 @@ export default class App extends Component {
             }
         }, 1000 / 10);
 
+    };
 
-        // Setup preview canvas
-        this.canvas = this.refs.canvas;
-        this.ctx = this.canvas.getContext("2d");
+    addAll = () => {
+        this.head.position.set(0, 12, 0);
+        this.headOuter.position.set(0, 12, 0);
+        this.chest.position.set(0, 2, 0);
+        this.chestOuter.position.set(0, 2, 0);
 
-        this.canvas.width = 64;
-        this.canvas.height = 64;
+        if (this.state.isAlex) {
+            this.armL.position.set(5.5, 2, 0);
+            this.armLOuter.position.set(5.5, 2, 0);
+            this.armR.position.set(-5.5, 2, 0);
+            this.armROuter.position.set(-5.5, 2, 0);
+        } else {
+            this.armL.position.set(6, 2, 0);
+            this.armLOuter.position.set(6, 2, 0);
+            this.armR.position.set(-6, 2, 0);
+            this.armROuter.position.set(-6, 2, 0);
+        }
 
-        this.loadImageFromFile(skin);
+        this.legL.position.set(-2, -10, 0);
+        this.legLOuter.position.set(-2, -10, 0);
+        this.legR.position.set(2, -10, 0);
+        this.legROuter.position.set(2, -10, 0);
+
+        this.scene.add(this.head);
+        this.scene.add(this.chest);
+        this.scene.add(this.armL);
+        this.scene.add(this.armR);
+        this.scene.add(this.legL);
+        this.scene.add(this.legR);
+        if (this.state.outer) {
+            this.scene.add(this.armLOuter);
+            this.scene.add(this.armROuter);
+            this.scene.add(this.chestOuter);
+            this.scene.add(this.headOuter);
+            this.scene.add(this.legLOuter);
+            this.scene.add(this.legROuter);
+        }
+    };
+
+    createBodyPart = (objRef, texture, leftParam, rightParam, topParam, botParam, frontParam, backParam, dims) => {
+        let left = texture.clone();
+        let right = texture.clone();
+        let top = texture.clone();
+        let bot = texture.clone();
+        let front = texture.clone();
+        let back = texture.clone();
+
+        left.repeat.set(leftParam.sizeX/64, leftParam.sizeY/64);
+        left.offset.x = leftParam.xOffset/64;
+        left.offset.y = 1 - (leftParam.sizeY/64) - (leftParam.yOffset/64);
+
+        right.repeat.set(rightParam.sizeX/64, rightParam.sizeY/64);
+        right.offset.x = rightParam.xOffset/64;
+        right.offset.y = 1 - (rightParam.sizeY/64) - (rightParam.yOffset/64);
+
+        top.repeat.set(topParam.sizeX/64, topParam.sizeY/64);
+        top.offset.x = topParam.xOffset/64;
+        top.offset.y = 1 - (topParam.sizeY/64) - (topParam.yOffset/64);
+
+        bot.repeat.set(botParam.sizeX/64, -botParam.sizeY/64);
+        bot.offset.x = botParam.xOffset/64;
+        bot.offset.y = 1 - (botParam.sizeY/64) - (botParam.yOffset/64) + botParam.sizeY/64;
+
+        front.repeat.set(frontParam.sizeX/64, frontParam.sizeY/64);
+        front.offset.x = frontParam.xOffset/64;
+        front.offset.y = 1 - (frontParam.sizeY/64) - (frontParam.yOffset/64);
+
+        back.repeat.set(backParam.sizeX/64, backParam.sizeY/64);
+        back.offset.x = backParam.xOffset/64;
+        back.offset.y = 1 - (backParam.sizeY/64) - (backParam.yOffset/64);
+
+        this.textures.push(left);
+        this.textures.push(right);
+        this.textures.push(top);
+        this.textures.push(bot);
+        this.textures.push(front);
+        this.textures.push(back);
+
+        let material = [new THREE.MeshBasicMaterial({ map: left }), new THREE.MeshBasicMaterial({ map: right }), new THREE.MeshBasicMaterial({ map: top }), new THREE.MeshBasicMaterial({ map: bot }), new THREE.MeshBasicMaterial({ map: front }), new THREE.MeshBasicMaterial({ map: back })];
+        let geometry = new THREE.BoxBufferGeometry( dims.x, dims.y, dims.z);
+
+        if (dims.isOuter) {
+            material = [new THREE.MeshBasicMaterial({ map: left, transparent: true }), new THREE.MeshBasicMaterial({ map: right, transparent: true }), new THREE.MeshBasicMaterial({ map: top, transparent: true }), new THREE.MeshBasicMaterial({ map: bot, transparent: true }), new THREE.MeshBasicMaterial({ map: front, transparent: true }), new THREE.MeshBasicMaterial({ map: back, transparent: true })];
+            geometry = new THREE.BoxBufferGeometry( dims.x + 0.5, dims.y + 0.5, dims.z + 0.5);
+        }
+
+        let obj = new THREE.Mesh( geometry, material );
+        this.offsets.push({object: obj, left: leftParam, right: rightParam, top: topParam, bot: botParam, front: frontParam, back: backParam});
+
+        if (dims.isOuter) {
+            var geo = new THREE.EdgesGeometry( obj.geometry );
+            var mat = new THREE.LineBasicMaterial( { color: 0x000000, linewidth: 1 } );
+            var wireframe = new THREE.LineSegments( geo, mat );
+            wireframe.renderOrder = 1; // make sure wireframes are rendered 2nd
+            obj.add( wireframe );
+        }
+
+
+        return obj;
     };
 
 
-    updateSkinPreview = () => {
-        const {pixels} = this;
-        for (let i = 0; i < pixels.length; i++) {
-            for (let j = 0; j < pixels[i].length; j++) {
-                if (pixels[i][j] !== 0) {
-                    if (pixels[i][j].hasColor) {
-                        let c = pixels[i][j].cube.geometry.faces[pixels[i][j].side].color;
-                        this.ctx.fillStyle = "rgb(" + (c.r * 255) + ", " + (c.g * 255) + ", " + (c.b * 255) + ")";
-                        this.ctx.fillRect(i, j, 1, 1);
-                    } else {
-                        if (pixels[i][j].external) {
-                            this.ctx.clearRect(i, j, 1, 1);
-                        }
-                    }
-                }
-            }
-        }
-        return true;
-    };
+    init = () => {
+        this.clearScene();
 
-    setColored = (cube, side, colored) => {
-        let {pixels} = this;
-        let successful = false;
-        for (let i = 0; i < pixels.length; i++) {
-            if (successful) {
-                break;
-            }
-            for (let j = 0; j < pixels[i].length; j++) {
-                if (pixels[i][j] !== 0) {
-                    if (pixels[i][j].cube === cube) {
-                        if (side % 2 === 1) {
-                            if (pixels[i][j].side === side - 1) {
-                                pixels[i][j].hasColor = colored;
-                                successful = true;
-                                break;
-                            }
-                        } else {
-                            if (pixels[i][j].side === side) {
-                                pixels[i][j].hasColor = colored;
-                                successful = true;
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
+        let texture;
+        texture = new THREE.CanvasTexture(this.canvas);
+        texture.magFilter = THREE.NearestFilter;
+        texture.minFilter = THREE.LinearMipMapLinearFilter;
+        texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+
+        this.head = this.createBodyPart(this.head, texture,
+            {sizeX: 8, sizeY: 8, xOffset: 16, yOffset: 8},
+            {sizeX: 8, sizeY: 8, xOffset: 0, yOffset: 8},
+            {sizeX: 8, sizeY: 8, xOffset: 8, yOffset: 0},
+            {sizeX: 8, sizeY: 8, xOffset: 16, yOffset: 0},
+            {sizeX: 8, sizeY: 8, xOffset: 8, yOffset: 8},
+            {sizeX: 8, sizeY: 8, xOffset: 24, yOffset: 8},
+            {x: 8, y: 8, z: 8, isOuter: false});
+
+        this.headOuter = this.createBodyPart(this.headOuter, texture,
+            {sizeX: 8, sizeY: 8, xOffset: 48, yOffset: 8},
+            {sizeX: 8, sizeY: 8, xOffset: 32, yOffset: 8},
+            {sizeX: 8, sizeY: 8, xOffset: 40, yOffset: 0},
+            {sizeX: 8, sizeY: 8, xOffset: 48, yOffset: 0},
+            {sizeX: 8, sizeY: 8, xOffset: 40, yOffset: 8},
+            {sizeX: 8, sizeY: 8, xOffset: 56, yOffset: 8},
+            {x: 8, y: 8, z: 8, isOuter: true});
+
+        this.chest = this.createBodyPart(this.chest, texture,
+            {sizeX: 4, sizeY: 12, xOffset: 28, yOffset: 20},
+            {sizeX: 4, sizeY: 12, xOffset: 16, yOffset: 20},
+            {sizeX: 8, sizeY: 4, xOffset: 20, yOffset: 16},
+            {sizeX: 8, sizeY: 4, xOffset: 28, yOffset: 16},
+            {sizeX: 8, sizeY: 12, xOffset: 20, yOffset: 20},
+            {sizeX: 8, sizeY: 12, xOffset: 32, yOffset: 20},
+            {x: 8, y: 12, z: 4, isOuter: false});
+
+        this.chestOuter = this.createBodyPart(this.chestOuter, texture,
+            {sizeX: 4, sizeY: 12, xOffset: 28, yOffset: 36},
+            {sizeX: 4, sizeY: 12, xOffset: 16, yOffset: 36},
+            {sizeX: 8, sizeY: 4, xOffset: 20, yOffset: 32},
+            {sizeX: 8, sizeY: 4, xOffset: 28, yOffset: 32},
+            {sizeX: 8, sizeY: 12, xOffset: 20, yOffset: 36},
+            {sizeX: 8, sizeY: 12, xOffset: 32, yOffset: 36},
+            {x: 8, y: 12, z: 4, isOuter: true});
+
+        if (this.state.isAlex) {
+            this.armL = this.createBodyPart(this.armL, texture,
+                {sizeX: 4, sizeY: 12, xOffset: 39, yOffset: 52},
+                {sizeX: 4, sizeY: 12, xOffset: 32, yOffset: 52},
+                {sizeX: 3, sizeY: 4, xOffset: 36, yOffset: 48},
+                {sizeX: 3, sizeY: 4, xOffset: 39, yOffset: 48},
+                {sizeX: 3, sizeY: 12, xOffset: 36, yOffset: 52},
+                {sizeX: 3, sizeY: 12, xOffset: 43, yOffset: 52},
+                {x: 3, y: 12, z: 4, isOuter: false});
+
+            this.armLOuter = this.createBodyPart(this.armLOuter, texture,
+                {sizeX: 4, sizeY: 12, xOffset: 55, yOffset: 52},
+                {sizeX: 4, sizeY: 12, xOffset: 48, yOffset: 52},
+                {sizeX: 3, sizeY: 4, xOffset: 52, yOffset: 48},
+                {sizeX: 3, sizeY: 4, xOffset: 55, yOffset: 48},
+                {sizeX: 3, sizeY: 12, xOffset: 52, yOffset: 52},
+                {sizeX: 3, sizeY: 12, xOffset: 59, yOffset: 52},
+                {x: 3, y: 12, z: 4, isOuter: true});
+
+            this.armR = this.createBodyPart(this.armR, texture,
+                {sizeX: 4, sizeY: 12, xOffset: 47, yOffset: 20},
+                {sizeX: 4, sizeY: 12, xOffset: 40, yOffset: 20},
+                {sizeX: 3, sizeY: 4, xOffset: 44, yOffset: 16},
+                {sizeX: 3, sizeY: 4, xOffset: 47, yOffset: 16},
+                {sizeX: 3, sizeY: 12, xOffset: 44, yOffset: 20},
+                {sizeX: 3, sizeY: 12, xOffset: 51, yOffset: 20},
+                {x: 3, y: 12, z: 4, isOuter: false});
+
+            this.armROuter = this.createBodyPart(this.armROuter, texture,
+                {sizeX: 4, sizeY: 12, xOffset: 47, yOffset: 36},
+                {sizeX: 4, sizeY: 12, xOffset: 40, yOffset: 36},
+                {sizeX: 3, sizeY: 4, xOffset: 44, yOffset: 32},
+                {sizeX: 3, sizeY: 4, xOffset: 47, yOffset: 32},
+                {sizeX: 3, sizeY: 12, xOffset: 44, yOffset: 36},
+                {sizeX: 3, sizeY: 12, xOffset: 51, yOffset: 36},
+                {x: 3, y: 12, z: 4, isOuter: true});
+        } else {
+            this.armL = this.createBodyPart(this.armL, texture,
+                {sizeX: 4, sizeY: 12, xOffset: 40, yOffset: 52},
+                {sizeX: 4, sizeY: 12, xOffset: 32, yOffset: 52},
+                {sizeX: 4, sizeY: 4, xOffset: 36, yOffset: 48},
+                {sizeX: 4, sizeY: 4, xOffset: 40, yOffset: 48},
+                {sizeX: 4, sizeY: 12, xOffset: 36, yOffset: 52},
+                {sizeX: 4, sizeY: 12, xOffset: 44, yOffset: 52},
+                {x: 4, y: 12, z: 4, isOuter: false});
+
+            this.armLOuter = this.createBodyPart(this.armLOuter, texture,
+                {sizeX: 4, sizeY: 12, xOffset: 56, yOffset: 52},
+                {sizeX: 4, sizeY: 12, xOffset: 48, yOffset: 52},
+                {sizeX: 4, sizeY: 4, xOffset: 52, yOffset: 48},
+                {sizeX: 4, sizeY: 4, xOffset: 56, yOffset: 48},
+                {sizeX: 4, sizeY: 12, xOffset: 52, yOffset: 52},
+                {sizeX: 4, sizeY: 12, xOffset: 60, yOffset: 52},
+                {x: 4, y: 12, z: 4, isOuter: true});
+
+            this.armR = this.createBodyPart(this.armR, texture,
+                {sizeX: 4, sizeY: 12, xOffset: 48, yOffset: 20},
+                {sizeX: 4, sizeY: 12, xOffset: 40, yOffset: 20},
+                {sizeX: 4, sizeY: 4, xOffset: 44, yOffset: 16},
+                {sizeX: 4, sizeY: 4, xOffset: 48, yOffset: 16},
+                {sizeX: 4, sizeY: 12, xOffset: 44, yOffset: 20},
+                {sizeX: 4, sizeY: 12, xOffset: 52, yOffset: 20},
+                {x: 4, y: 12, z: 4, isOuter: false});
+
+            this.armROuter = this.createBodyPart(this.armROuter, texture,
+                {sizeX: 4, sizeY: 12, xOffset: 48, yOffset: 36},
+                {sizeX: 4, sizeY: 12, xOffset: 40, yOffset: 36},
+                {sizeX: 4, sizeY: 4, xOffset: 44, yOffset: 32},
+                {sizeX: 4, sizeY: 4, xOffset: 48, yOffset: 32},
+                {sizeX: 4, sizeY: 12, xOffset: 44, yOffset: 36},
+                {sizeX: 4, sizeY: 12, xOffset: 52, yOffset: 36},
+                {x: 4, y: 12, z: 4, isOuter: true});
         }
-        return successful;
+
+        this.legL = this.createBodyPart(this.legL, texture,
+            {sizeX: 4, sizeY: 12, xOffset: 24, yOffset: 52},
+            {sizeX: 4, sizeY: 12, xOffset: 16, yOffset: 52},
+            {sizeX: 4, sizeY: 4, xOffset: 20, yOffset: 48},
+            {sizeX: 4, sizeY: 4, xOffset: 24, yOffset: 48},
+            {sizeX: 4, sizeY: 12, xOffset: 20, yOffset: 52},
+            {sizeX: 4, sizeY: 12, xOffset: 28, yOffset: 52},
+            {x: 4, y: 12, z: 4, isOuter: false});
+
+        this.legLOuter = this.createBodyPart(this.legLOuter, texture,
+            {sizeX: 4, sizeY: 12, xOffset: 8, yOffset: 52},
+            {sizeX: 4, sizeY: 12, xOffset: 0, yOffset: 52},
+            {sizeX: 4, sizeY: 4, xOffset: 4, yOffset: 48},
+            {sizeX: 4, sizeY: 4, xOffset: 8, yOffset: 48},
+            {sizeX: 4, sizeY: 12, xOffset: 4, yOffset: 52},
+            {sizeX: 4, sizeY: 12, xOffset: 12, yOffset: 52},
+            {x: 4, y: 12, z: 4, isOuter: true});
+
+        this.legR = this.createBodyPart(this.legR, texture,
+            {sizeX: 4, sizeY: 12, xOffset: 8, yOffset: 20},
+            {sizeX: 4, sizeY: 12, xOffset: 0, yOffset: 20},
+            {sizeX: 4, sizeY: 4, xOffset: 4, yOffset: 16},
+            {sizeX: 4, sizeY: 4, xOffset: 8, yOffset: 16},
+            {sizeX: 4, sizeY: 12, xOffset: 4, yOffset: 20},
+            {sizeX: 4, sizeY: 12, xOffset: 12, yOffset: 20},
+            {x: 4, y: 12, z: 4, isOuter: false});
+
+        this.legROuter = this.createBodyPart(this.legROuter, texture,
+            {sizeX: 4, sizeY: 12, xOffset: 8, yOffset: 36},
+            {sizeX: 4, sizeY: 12, xOffset: 0, yOffset: 36},
+            {sizeX: 4, sizeY: 4, xOffset: 4, yOffset: 32},
+            {sizeX: 4, sizeY: 4, xOffset: 8, yOffset: 32},
+            {sizeX: 4, sizeY: 12, xOffset: 4, yOffset: 36},
+            {sizeX: 4, sizeY: 12, xOffset: 12, yOffset: 36},
+            {x: 4, y: 12, z: 4, isOuter: true});
+
+        this.addAll();
     };
 
     colorSelect = (e) => {
-        if (this.clickDelay === 0) {
-            this.clickDelay = 5;
-            this.setState({colorSlot: parseInt(e.target.attributes.getNamedItem('slot').value)});
-            this.setState({mode: 0});
-        } else {
+        if (this.clickDelay !== 0 && this.lastClicked === parseInt(e.target.attributes.getNamedItem('slot').value)) {
             this.openPallet();
+        } else {
+            this.clickDelay = 5;
+            this.lastClicked = parseInt(e.target.attributes.getNamedItem('slot').value);
+            this.setState({colorSlot: parseInt(e.target.attributes.getNamedItem('slot').value)});
         }
     };
 
@@ -1126,7 +642,7 @@ export default class App extends Component {
         if (h.length === 7 && /^#[0-9A-F]{6}$/i.test(h)) {
             this.colors[this.state.colorSlot] = h;
         } else if (h.length === 6) {
-           this.colors[this.state.colorSlot] = "#" + h;
+            this.colors[this.state.colorSlot] = "#" + h;
         }
         this.updateColors();
         this.closePallet();
@@ -1147,6 +663,21 @@ export default class App extends Component {
         }
     };
 
+    openMenu = () => {
+        if (!this.state.menu) {
+            this.setState({menu: true});
+            this.setState({mode: -1});
+        }
+    };
+
+    closeMenu = () => {
+        if (this.state.menu) {
+            this.setState({menu: false});
+            this.mouse.x = -100;
+            this.setState({mode: 0});
+        }
+    };
+
     setPen = () => {
         this.setState({mode: 0});
     };
@@ -1161,6 +692,121 @@ export default class App extends Component {
 
     setDropper = () => {
         this.setState({mode: 3});
+    };
+
+    setBucket = () => {
+        this.setState({mode: 4});
+    };
+
+    setAlex = (t) => {
+        console.log("isAlex: " + t);
+        this.setState({isAlex: t});
+    };
+
+    clearScene = () => {
+        console.log("clearing");
+        while (this.scene.children.length) {
+            this.scene.remove(this.scene.children[0]);
+        }
+    };
+
+    showFull = () => {
+        this.clearScene();
+        this.head.position.set(0, 12, 0);
+        this.scene.add(this.head);
+        this.headOuter.position.set(0, 12, 0);
+        this.chest.position.set(0, 2, 0);
+        this.scene.add(this.chest);
+        this.chestOuter.position.set(0, 2, 0);
+        this.armL.position.set(6, 2, 0);
+        this.scene.add(this.armL);
+        this.armLOuter.position.set(6, 2, 0);
+        this.armR.position.set(-6, 2, 0);
+        this.scene.add(this.armR);
+        this.armROuter.position.set(-6, 2, 0);
+        this.legL.position.set(-2, -10, 0);
+        this.scene.add(this.legL);
+        this.legLOuter.position.set(-2, -10, 0);
+        this.legR.position.set(2, -10, 0);
+        this.scene.add(this.legR);
+        this.legROuter.position.set(2, -10, 0);
+
+        if (this.state.outer) {
+            this.scene.add(this.headOuter);
+            this.scene.add(this.chestOuter);
+            this.scene.add(this.armLOuter);
+            this.scene.add(this.armROuter);
+            this.scene.add(this.legLOuter);
+            this.scene.add(this.legROuter);
+        }
+
+        this.setState({part: -1});
+    };
+
+    showHead = () => {
+        this.clearScene();
+        this.scene.add(this.head);
+        this.head.position.set(0, 0, 0);
+        if (this.state.outer) {
+            this.scene.add(this.headOuter);
+        }
+        this.headOuter.position.set(0, 0, 0);
+        this.setState({part: 0});
+    };
+
+    showChest = () => {
+        this.clearScene();
+        this.scene.add(this.chest);
+        this.chest.position.set(0, 0, 0);
+        if (this.state.outer) {
+            this.scene.add(this.chestOuter);
+        }
+        this.chestOuter.position.set(0, 0, 0);
+        this.setState({part: 1});
+    };
+
+    showLeftArm = () => {
+        this.clearScene();
+        this.scene.add(this.armL);
+        this.armL.position.set(0, 0, 0);
+        if (this.state.outer) {
+            this.scene.add(this.armLOuter);
+        }
+        this.armLOuter.position.set(0, 0, 0);
+        this.setState({part: 2});
+    };
+
+    showRightArm = () => {
+        this.clearScene();
+        this.scene.add(this.armR);
+        this.armR.position.set(0, 0, 0);
+        if (this.state.outer) {
+            this.scene.add(this.armROuter);
+        }
+        this.armROuter.position.set(0, 0, 0);
+        this.setState({part: 3});
+    };
+
+    showLeftLeg = () => {
+        this.clearScene();
+        this.scene.add(this.legL);
+        this.legL.position.set(0, 0, 0);
+        if (this.state.outer) {
+            this.scene.add(this.legLOuter);
+        }
+        this.legLOuter.position.set(0, 0, 0);
+        this.setState({part: 4});
+    };
+
+    showRightLeg = () => {
+        this.clearScene();
+        this.scene.add(this.legR);
+        this.legR.position.set(0, 0, 0);
+        if (this.state.outer) {
+            this.scene.add(this.legROuter);
+        }
+        this.legROuter.position.set(0, 0, 0);
+        this.setState({part: 5});
     };
 
     updateColors = () => {
@@ -1190,50 +836,68 @@ export default class App extends Component {
     };
 
     toggleLayer = (e) => {
-        let {pixels} = this;
-        if (this.state.outer) {
-            this.setState({outer: false});
-            for (let i = 0; i < pixels.length; i++) {
-                for (let j = 0; j < pixels[i].length; j++) {
-                    if (pixels[i][j] !== 0) {
-                        if (pixels[i][j].external) {
-                            this.scene.remove(pixels[i][j].cube);
-                        }
-                    }
-                }
+        if (this.state.part === -1) {
+            if (this.state.outer) {
+                this.setState({outer: false});
+                this.scene.remove(this.headOuter);
+                this.scene.remove(this.chestOuter);
+                this.scene.remove(this.legLOuter);
+                this.scene.remove(this.legROuter);
+                this.scene.remove(this.armLOuter);
+                this.scene.remove(this.armROuter);
+            } else {
+                this.setState({outer: true});
+                this.scene.add(this.headOuter);
+                this.scene.add(this.chestOuter);
+                this.scene.add(this.legLOuter);
+                this.scene.add(this.legROuter);
+                this.scene.add(this.armLOuter);
+                this.scene.add(this.armROuter);
             }
         } else {
-            this.setState({outer: true});
-            for (let i = 0; i < pixels.length; i++) {
-                for (let j = 0; j < pixels[i].length; j++) {
-                    if (pixels[i][j] !== 0) {
-                        if (pixels[i][j].external) {
-                            this.scene.add(pixels[i][j].cube);
-                        }
-                    }
+            if (this.state.outer) {
+                this.setState({outer: false});
+                switch (this.state.part) {
+                    case 0:
+                        this.scene.remove(this.headOuter);
+                        break;
+                    case 1:
+                        this.scene.remove(this.chestOuter);
+                        break;
+                    case 2:
+                        this.scene.remove(this.armLOuter);
+                        break;
+                    case 3:
+                        this.scene.remove(this.armROuter);
+                        break;
+                    case 4:
+                        this.scene.remove(this.legLOuter);
+                        break;
+                    case 5:
+                        this.scene.remove(this.legROuter);
+                        break;
                 }
-            }
-        }
-    };
-
-    clearCanvas = () => {
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        for (let i = 0; i < this.pixels.length; i++) {
-            for (let j = 0; j < this.pixels[i].length; j++) {
-                if (this.pixels[i][j] !== 0) {
-
-                    let faceIndex = this.pixels[i][j].side;
-
-                    this.pixels[i][j].cube.geometry.faces[faceIndex].materialIndex = 1;
-                    this.pixels[i][j].cube.geometry.faces[faceIndex + 1].materialIndex = 1;
-
-                    this.pixels[i][j].cube.geometry.faces[faceIndex].color.set(new THREE.Color("white"));
-                    this.pixels[i][j].cube.geometry.faces[faceIndex + 1].color.set(new THREE.Color("white"));
-
-
-                    this.pixels[i][j].cube.geometry.colorsNeedUpdate = true;
-                    this.pixels[i][j].cube.geometry.groupsNeedUpdate = true;
-                    this.pixels[i][j].hasColor = false;
+            } else {
+                this.setState({outer: true});
+                switch (this.state.part) {
+                    case 0:
+                        this.scene.add(this.headOuter);
+                        break;
+                    case 1:
+                        this.scene.add(this.chestOuter);
+                        break;
+                    case 2:
+                        this.scene.add(this.armLOuter);
+                        break;
+                    case 3:
+                        this.scene.add(this.armROuter);
+                        break;
+                    case 4:
+                        this.scene.add(this.legLOuter);
+                        break;
+                    case 5:
+                        this.scene.add(this.legROuter);
+                        break;
                 }
             }
 
@@ -1241,118 +905,51 @@ export default class App extends Component {
     };
 
     loadImage = (e) => {
-        // Loading skin to canvas so clear beforehand
-        this.clearCanvas();
+        if (this.state.menu) {
+            this.closeMenu();
+        }
 
-        var reader = new FileReader();
+        let reader = new FileReader();
         reader.onload = (event) => {
-            var img = new Image();
+            let img = new Image();
             img.onload = () => {
                 if (img.width === 64 && img.height === 64) {
+                    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
                     this.ctx.drawImage(img, 0, 0);
-                    let imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
-                    // Pixels
-                    for (let i = 0; i < 64; i++) {
-                        for (let j = 0; j < 64; j++) {
-                            if (this.pixels[i][j] !== 0) {
-
-                                let index = (j * imageData.width + i) * 4;
-                                let r = imageData.data[index];
-                                let g = imageData.data[index + 1];
-                                let b = imageData.data[index + 2];
-                                let a = imageData.data[index + 3];
-
-                                let color = `rgb(${r}, ${g}, ${b})`;
-                                let faceIndex = this.pixels[i][j].side;
-
-                                if (a > 0) {
-                                    if (this.pixels[i][j].external) {
-                                        this.pixels[i][j].hasColor = true;
-                                    }
-                                    this.pixels[i][j].cube.geometry.faces[faceIndex].color.set(new THREE.Color(color));
-                                    this.pixels[i][j].cube.geometry.faces[faceIndex].materialIndex = 0;
-                                    if (faceIndex === 0 || (faceIndex % 2) === 0) {
-                                        this.pixels[i][j].cube.geometry.faces[faceIndex + 1].color.set(new THREE.Color(color));
-                                        this.pixels[i][j].cube.geometry.faces[faceIndex + 1].materialIndex = 0;
-                                    } else {
-                                        this.pixels[i][j].cube.geometry.faces[faceIndex - 1].color.set(new THREE.Color(color));
-                                        this.pixels[i][j].cube.geometry.faces[faceIndex - 1].materialIndex = 0;
-                                    }
-                                    this.pixels[i][j].cube.geometry.colorsNeedUpdate = true;
-                                    this.pixels[i][j].cube.geometry.groupsNeedUpdate = true;
-                                }
-                            }
-                        }
-                    }
+                    this.init();
+                } else {
+                    console.log("Error! Invalid skin file");
                 }
             };
             img.src = event.target.result;
-
         };
         reader.readAsDataURL(e.target.files[0]);
-
     };
 
-
-    loadImageFromFile = (file) => {
-        // Loading skin to canvas so clear beforehand
-        this.clearCanvas();
+    loadPreset = (skin) => {
         let img = new Image();
         img.onload = () => {
-            if (img.width === 64 && img.height === 64) {
-                this.ctx.drawImage(img, 0, 0);
-                let imageData = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
-                // Pixels
-                for (let i = 0; i < 64; i++) {
-                    for (let j = 0; j < 64; j++) {
-                        if (this.pixels[i][j] !== 0) {
-
-                            let index = (j * imageData.width + i) * 4;
-                            let r = imageData.data[index];
-                            let g = imageData.data[index + 1];
-                            let b = imageData.data[index + 2];
-                            let a = imageData.data[index + 3];
-
-                            let color = `rgb(${r}, ${g}, ${b})`;
-                            let faceIndex = this.pixels[i][j].side;
-
-                            if (a > 0) {
-                                if (this.pixels[i][j].external) {
-                                    this.pixels[i][j].hasColor = true;
-                                }
-
-                                this.pixels[i][j].cube.geometry.faces[faceIndex].color.set(new THREE.Color(color));
-                                this.pixels[i][j].cube.geometry.faces[faceIndex].materialIndex = 0;
-                                if (faceIndex === 0 || (faceIndex % 2) === 0) {
-                                    this.pixels[i][j].cube.geometry.faces[faceIndex + 1].color.set(new THREE.Color(color));
-                                    this.pixels[i][j].cube.geometry.faces[faceIndex + 1].materialIndex = 0;
-                                } else {
-                                    this.pixels[i][j].cube.geometry.faces[faceIndex - 1].color.set(new THREE.Color(color));
-                                    this.pixels[i][j].cube.geometry.faces[faceIndex - 1].materialIndex = 0;
-                                }
-
-
-                                this.pixels[i][j].cube.geometry.colorsNeedUpdate = true;
-                                this.pixels[i][j].cube.geometry.groupsNeedUpdate = true;
-                            }
-                        }
-                    }
-                }
-            }
+            this.ctx.drawImage(img, 0, 0);
+            this.init();
         };
-        img.src = file;
+        img.src = skin;
     };
 
-    download = () => {
-        if (this.canvas !== null && this.updateSkinPreview()) {
-            var download = document.getElementById("download");
-            var image = this.canvas.toDataURL("image/png");
-            download.setAttribute("href", image);
+    fromScratch = () => {
+        if (this.state.menu) {
+            this.closeMenu();
         }
-    };
 
-    upload = () => {
-        document.getElementById("selectImage").click();
+        let img = new Image();
+        img.onload = () => {
+            this.ctx.drawImage(img, 0, 0);
+            this.init();
+        };
+        if (this.state.isAlex) {
+            img.src = alex;
+        } else {
+            img.src = steve;
+        }
     };
 
     render() {
@@ -1372,14 +969,26 @@ export default class App extends Component {
                          onClick={this.setDropper}>
                         <FontAwesomeIcon className="tool" icon={faEyeDropper} size="2x"/>
                     </div>
+
+                    <div className={"tool-holder" + (this.state.mode === 4 ? ' th-selected' : '')}
+                         onClick={this.setBucket}>
+                        <FontAwesomeIcon className="tool" icon={faFill} size="2x"/>
+                    </div>
+
                     <div className={"tool-holder" + (this.state.mode === 2 ? ' th-selected' : '')}
                          onClick={this.setRotate}>
                         <FontAwesomeIcon className="tool" icon={faSync} size="2x"/>
                     </div>
-                    <div className="tool-holder" onClick={this.toggleLayer}>
-                        <FontAwesomeIcon className="tool" icon={faLayerGroup} size="2x"/>
+
+                    <div className="menu-button tool-holder" onClick={this.openMenu}>
+                        <FontAwesomeIcon className="tool" icon={faFileExport} size="2x"/>
                     </div>
                 </div>
+
+                <div className={"layer-tool tool-holder" + (this.state.outer ? ' th-selected' : '')} onClick={this.toggleLayer}>
+                    <FontAwesomeIcon className="tool" icon={faLayerGroup} size="2x"/>
+                </div>
+
 
                 <div className="colors">
                     <div onClick={this.colorSelect} ref="slot0" slot='0'
@@ -1400,19 +1009,13 @@ export default class App extends Component {
                     <div onClick={this.colorSelect} ref="slot5" slot='5'
                          className={"color-select" + (this.state.colorSlot === 5 ? ' cs-selected' : '')}
                          style={{backgroundColor: "#9C27B0"}}/>
-                     <br/>
-                     <div style={{textAlign: "center"}}>
-                         <button className="custom-button" onClick={this.upload}>Upload</button>
-                         <input id='selectImage' hidden style={{display: "none"}} type="file" onChange={this.loadImage} />
+                    <br/>
 
-                         <a id="download" download="skin.png"><button type="button" className="custom-button" onClick={this.download}>Download</button></a>
-                     </div>
                 </div>
 
-                <canvas ref="canvas" className="preview-canvas"/>
-
                 <Pallet colorSlot={this.state.colorSlot} colorSelect={this.changeColorSlot} colorSelectCustom={this.changeColorSlotCustom} closePallet={this.closePallet} pallet={this.state.pallet}/>
-
+                <Menu fromScratch={this.fromScratch} setAlex={this.setAlex} loadImage={this.loadImage} closeMenu={this.closeMenu} menu={this.state.menu} canvasAccess={(c) => { this.canvas = c; } }/>
+                <Parts part={this.state.part} full={this.showFull} head={this.showHead} chest={this.showChest} leftArm={this.showLeftArm} rightArm={this.showRightArm} leftLeg={this.showLeftLeg} rightLeg={this.showRightLeg}/>
             </div>
         );
     }

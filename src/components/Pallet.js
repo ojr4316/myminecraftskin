@@ -1,87 +1,54 @@
 import React, {Component} from 'react';
 import '../App.css';
-import {faLayerGroup, faTimes} from '@fortawesome/free-solid-svg-icons'
+import {faTimes} from '@fortawesome/free-solid-svg-icons'
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
+import {ChromePicker} from 'react-color';
 
 export default class Pallet extends Component {
 
     state = {
-      hexcode: 0
+        hexcode: 0,
+        displayColorPicker: false
     };
 
-    onChange = (e) => {
-        this.setState({ [e.target.name]: e.target.value });
-        if (e.target.name === "hexcode") {
-            if (e.target.value.length === 7 && /^#[0-9A-F]{6}$/i.test(e.target.value)) {
-                if (this.isLight(e.target.value)) {
-                    this.refs.previewButton.style.color = "#000000";
-                    this.refs.previewButton.style.borderColor = "#000000";
-                } else {
-                    this.refs.previewButton.style.color = "#FFFFFF";
-                    this.refs.previewButton.style.borderColor = "#FFFFFF";
-                }
-                this.refs.previewButton.style.backgroundColor = e.target.value;
-            } else if (e.target.value.length === 6 && /^#[0-9A-F]{6}$/i.test("#" + e.target.value)) {
-                if (this.isLight("#" + e.target.value)) {
-                    this.refs.previewButton.style.color = "#000000";
-                    this.refs.previewButton.style.borderColor = "#000000";
-                } else {
-                    this.refs.previewButton.style.color = "#FFFFFF";
-                    this.refs.previewButton.style.borderColor = "#FFFFFF";
-                }
-                this.refs.previewButton.style.backgroundColor = "#" + e.target.value;
-            }
-        }
-    };
-
-
-    isLight = (color) => {
-        var r, g, b, hsp;
-
-        // Check the format of the color, HEX or RGB?
-        if (color.match(/^rgb/)) {
-
-            // If HEX --> store the red, green, blue values in separate variables
-            color = color.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*(\d+(?:\.\d+)?))?\)$/);
-
-            r = color[1];
-            g = color[2];
-            b = color[3];
+    handleClick = () => {
+        if (!this.state.displayColorPicker) {
+            this.setState({ displayColorPicker: true})
         } else {
-
-            // If RGB --> Convert it to HEX: http://gist.github.com/983661
-            color = +("0x" + color.slice(1).replace(
-                color.length < 5 && /./g, '$&$&'));
-
-            r = color >> 16;
-            g = color >> 8 & 255;
-            b = color & 255;
-        }
-
-        // HSP (Highly Sensitive Poo) equation from http://alienryderflex.com/hsp.html
-        hsp = Math.sqrt(
-            0.299 * (r * r) +
-            0.587 * (g * g) +
-            0.114 * (b * b)
-        );
-
-        // Using the HSP value, determine whether the color is light or dark
-        if (hsp>127.5) {
-            return true;
-        } else {
-            return false;
+            this.props.colorSelectCustom(this.state.hexcode);
+            this.setState({ displayColorPicker: false});
         }
     };
 
-    customChange = (e) => {
-        e.preventDefault();
-        this.props.colorSelectCustom(this.state.hexcode);
+
+    customChange = (color) => {
+        this.setState({hexcode: color.hex});
     };
+
+    close = (e) => {
+        this.setState({displayColorPicker: false});
+        this.props.closePallet();
+    };
+
 
     render() {
+        const popover = {
+            position: 'absolute',
+            zIndex: '2',
+            left: "50%",
+            top: "50%",
+            transform: "translate(-50%, -50%)"
+        };
+        const cover = {
+            position: 'fixed',
+            top: '0px',
+            right: '0px',
+            bottom: '0px',
+            left: '0px',
+        };
         return (
             <div className="pallet" style={{display: this.props.pallet ? "initial" : "none"}}>
-                <FontAwesomeIcon onClick={this.props.closePallet} className="close" icon={faTimes} size="2x"/>
+                <FontAwesomeIcon onClick={this.close} className="close" icon={faTimes} size="2x"/>
                 <p style={{color: "#FFFFFF", fontSize: "2em", padding: "0", margin: "0"}}> Select a color </p>
                 <div onClick={this.props.colorSelect} color='#f44336'
                      className={"color-select"}
@@ -135,12 +102,13 @@ export default class Pallet extends Component {
 
                 <hr />
 
-                     <form onSubmit={this.customChange}>
-                         <p style={{color: "#FFFFFF"}}> Hexcode: </p>
-                         <input autoComplete="off" name="hexcode" onChange={this.onChange}/>
-                         <br/>
-                         <input ref="previewButton" className="custom-button" type="submit"/>
-                     </form>
+                <div>
+                    { this.state.displayColorPicker ? <div style={ popover }>
+                        <ChromePicker disableAlpha="true" color={ this.state.hexcode } onChange={this.customChange} />
+                    </div> : null }
+                    <button onClick={ this.handleClick } className="custom-button" style={{backgroundColor: this.state.displayColorPicker ? "#393e46" : "#222831"}}>{this.state.displayColorPicker ? "Pick Color" : "Choose Custom Color"}</button>
+
+                </div>
 
             </div>
         );
