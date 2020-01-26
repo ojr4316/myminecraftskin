@@ -9,7 +9,7 @@ html, body {
 }
 
 .colors {
-  background-color: #222831;
+  background-color: #272B4A;
   position: absolute;
   bottom: 0;
   width: 100%;
@@ -18,7 +18,7 @@ html, body {
 
 .pallet, .menu {
   position: absolute;
-  background-color: #222831;
+  background-color: #272B4A;
   left: 50%;
   top: 50%;
   transform: translate(-50%, -50%);
@@ -69,7 +69,7 @@ button:focus {outline:0;}
   display: inline-flex;
   right: 0;
   width: 100%;
-  background-color: #222831;
+  background-color: #272B4A;
   top: 0;
 }
 
@@ -77,6 +77,8 @@ button:focus {outline:0;}
   color: white;
   margin: 4px;
   cursor: pointer;
+  height: 64px;
+  width: 64px;
 }
 
 .close {
@@ -90,7 +92,7 @@ button:focus {outline:0;}
 
 .tool-holder {
   margin: 8px;
-  border: 2px solid #393e46;
+  border: 2px solid #41487C;
 }
 
 .layer-tool {
@@ -158,6 +160,12 @@ div.dropzone {
   transition: visibility 175ms, opacity 175ms;
 }
 
+.do-buttons {
+  position: absolute;
+  top: 64px;
+  right: 0;
+}
+
 @media (min-width: 1280px) {
   .pallet, .menu {
     width: 20vw;
@@ -182,6 +190,10 @@ div.dropzone {
 
   .parts {
     margin: 16px;
+  }
+
+  .do-buttons {
+    top: 96px;
   }
 
   .face {

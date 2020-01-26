@@ -59,8 +59,8 @@ export default class Menu extends Component {
 
     download = () => {
         if (this.canvas !== null) {
-            var download = document.getElementById("download");
-            var image = this.canvas.toDataURL("image/png");
+            let download = document.getElementById("download");
+            let image = this.canvas.toDataURL("image/png");
             download.setAttribute("href", image);
         }
     };

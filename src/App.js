@@ -3,20 +3,40 @@ import bg2 from './img/bg2.png';
 import bg from './img/bg.png';
 import steve from './img/skin.png';
 import alex from './img/alex.png';
+import ref from './img/4px_ref.png';
 import './App.css';
 import * as THREE from "three";
 import Pallet from './components/Pallet.js';
 import Menu from './components/Menu.js';
-import {FontAwesomeIcon} from '@fortawesome/react-fontawesome'
-import {faPen, faEraser, faSync, faLayerGroup, faEyeDropper, faFill, faFileExport} from '@fortawesome/free-solid-svg-icons'
+import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
+import {
+    faPen,
+    faEraser,
+    faSync,
+    faLayerGroup,
+    faEyeDropper,
+    faFill,
+    faFileExport,
+    faUndo,
+    faRedo
+} from '@fortawesome/free-solid-svg-icons';
 import Parts from "./components/Parts";
+import pencil from './img/pencil-icon.svg';
 
 export default class App extends Component {
 
     scene = null;
+    camera = null;
+    raycaster = null;
+
     textures = [];
+
     canvas = null;
     ctx = null;
+
+    actions = [];
+    aIdx = -1;
+    aSize = 63;
 
     // Double Click
     clickDelay = 0;
@@ -44,34 +64,35 @@ export default class App extends Component {
     colors = ['#f44336', '#2196F3',
         '#4CAF50', '#FFEB3B', "#FF9800", "#9C27B0"];
 
-    state = {
-        mode: 0, // 0 - pencil, 1 - eraser, 2 - rotate, 3 - eye drop, 4 - fill
-        colorSlot: 0,
-        ctx: null,
-        outer: true,
-        part: -1, // 0 - head, 1 - chest, 2 - left arm, 3 - right arm, 4 - left leg, 5 - right leg,
-        pallet: false,
-        menu: false,
-        isAlex: false
-    };
-
     touchDevice = (navigator.maxTouchPoints || 'ontouchstart' in document.documentElement);
     mouseDown = false;
 
     componentDidMount() {
+        this.state = {
+            mode: 0, // 0 - pencil, 1 - eraser, 2 - rotate, 3 - eye drop, 4 - fill
+            colorSlot: 0,
+            ctx: null,
+            outer: false,
+            part: -1, // 0 - head, 1 - chest, 2 - left arm, 3 - right arm, 4 - left leg, 5 - right leg,
+            pallet: false,
+            menu: false,
+            isAlex: false
+        };
+
         this.scene = new THREE.Scene();
-        let camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.z = 32;
+        this.camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight,
+            0.1, 1000);
+        this.camera.position.z = 32;
 
-        let renderer = new THREE.WebGLRenderer({ logarithmicDepthBuffer: true, antialias: true });
+        this.renderer = new THREE.WebGLRenderer({logarithmicDepthBuffer: true, antialias: true});
 
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
+        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(this.renderer.domElement);
 
         let OrbitControls = require('three-orbit-controls')(THREE);
-        let controls = new OrbitControls(camera, renderer.domElement);
-        controls.enablePan = false;
-        controls.enableZoom = true;
+        this.controls = new OrbitControls(this.camera, this.renderer.domElement);
+        this.controls.enablePan = false;
+        this.controls.enableZoom = true;
 
         let tex;
         if (this.touchDevice) {
@@ -81,277 +102,58 @@ export default class App extends Component {
         }
         this.scene.background = tex;
 
-        var raycaster = new THREE.Raycaster(); // create once
+        this.raycaster = new THREE.Raycaster(); // create once
         this.mouse = new THREE.Vector2(); // create once
         this.mouse.x = -100;
 
         this.ctx = this.canvas.getContext("2d");
 
-        let start = () => {
-            this.ctx.fillStyle = this.colors[this.state.colorSlot];
+        this.ctx.fillStyle = this.colors[this.state.colorSlot];
 
-            document.addEventListener('mousemove', (e) => {
-                this.mouse.x = (e.clientX / renderer.domElement.clientWidth) * 2 - 1;
-                this.mouse.y = -(e.clientY / renderer.domElement.clientHeight) * 2 + 1;
+        document.addEventListener('mousemove', (e) => {
+            this.mouse.x = (e.clientX / this.renderer.domElement.clientWidth) * 2 - 1;
+            this.mouse.y = -(e.clientY / this.renderer.domElement.clientHeight) * 2 + 1;
+        });
+        document.addEventListener("touchmove", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.mouse.x = (e.touches[0].clientX / this.renderer.domElement.clientWidth) * 2 - 1;
+            this.mouse.y = -(e.touches[0].clientY / this.renderer.domElement.clientHeight) * 2 + 1;
+
+        }, {passive: false});
+
+        document.addEventListener('keydown', (e) => {
+            if (e.keyCode === 90 && e.ctrlKey) { // Undo ctrl-z
+                console.log("undo?");
+                this.undo();
+            }
+            if (e.keyCode === 89 && e.ctrlKey) { // Redo ctrl-y
+                this.redo();
+            }
+        });
+
+        if (!this.touchDevice) {
+            document.addEventListener('mousedown', (e) => {
+                this.mouseDown = true;
             });
-            document.addEventListener("touchmove", (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                this.mouse.x = (e.touches[0].clientX / renderer.domElement.clientWidth) * 2 - 1;
-                this.mouse.y = -(e.touches[0].clientY / renderer.domElement.clientHeight) * 2 + 1;
 
-            }, {passive: false});
+            this.renderer.domElement.addEventListener('mouseup', (e) => {
+                this.addAction();
+            });
 
-            if (!this.touchDevice) {
-                document.addEventListener('mousedown', (e) => {
-                    this.mouseDown = true;
-                });
-                document.addEventListener('mouseup', (e) => {
-                    this.mouseDown = false;
-                    this.drawing = false;
-                    this.dragging = false;
-                });
-            }
+            document.addEventListener('mouseup', (e) => {
+                this.mouseDown = false;
+                this.drawing = false;
+                this.dragging = false;
+            });
+        } else {
+            this.renderer.domElement.addEventListener('touchend', (e) => {
+                this.addAction();
+            });
+        }
 
-            this.loadPreset(steve);
-            animate();
-        };
-
-        let animate = () => {
-            requestAnimationFrame(animate);
-            camera.lookAt(0, 0);
-
-            controls.update();
-            renderer.render(this.scene, camera);
-
-            for (let t = 0; t < this.textures.length; t++) {
-                this.textures[t].needsUpdate = true;
-            }
-
-            update();
-        };
-
-        let update = () => {
-            let {colorSlot, mode, outer} = this.state;
-            raycaster.setFromCamera(this.mouse, camera);
-            let intersects = raycaster.intersectObjects(this.scene.children);
-            this.ctx.fillStyle = this.colors[this.state.colorSlot];
-            switch (mode) {
-                case -1:
-                    controls.enabled = false;
-                    break;
-                case 0: // Pencil
-                    if (!this.touchDevice && !this.mouseDown) {
-                        break;
-                    }
-
-                    if (!this.touchDevice) {
-                        if (this.dragging && !this.drawing) {
-                            controls.enabled = true;
-                        }
-                    } else {
-                        controls.enabled = false;
-                    }
-
-                    if (intersects.length > 0 && !this.dragging) {
-                        controls.enabled = false;
-                        if (!this.touchDevice) {
-                            this.dragging = false;
-                            this.drawing = true;
-                        }
-                        let faceIndex = (intersects[0].faceIndex % 2 === 1 ? intersects[0].faceIndex - 1 : intersects[0].faceIndex) / 2;
-                        for (let i = 0; i < this.offsets.length; i++) {
-                            if (intersects[0].object === this.offsets[i].object) {
-                                switch (faceIndex) {
-                                    case 0: // left
-                                        this.ctx.fillRect(this.offsets[i].left.xOffset + Math.floor(intersects[0].uv.x * this.offsets[i].left.sizeX), this.offsets[i].left.yOffset + (this.offsets[i].left.sizeY-1)-Math.floor(intersects[0].uv.y *  this.offsets[i].left.sizeY), 1, 1);
-                                        break;
-                                    case 1: // right
-                                        this.ctx.fillRect(this.offsets[i].right.xOffset + Math.floor(intersects[0].uv.x * this.offsets[i].right.sizeX), this.offsets[i].right.yOffset  + (this.offsets[i].right.sizeY-1)-Math.floor(intersects[0].uv.y * this.offsets[i].right.sizeY), 1, 1);
-                                        break;
-                                    case 2: // top
-                                        this.ctx.fillRect(this.offsets[i].top.xOffset + Math.floor(intersects[0].uv.x * this.offsets[i].top.sizeX), this.offsets[i].top.yOffset + ((this.offsets[i].top.sizeY-1)-Math.floor(intersects[0].uv.y * this.offsets[i].top.sizeY)), 1, 1);
-                                        break;
-                                    case 3: // bot
-                                        this.ctx.fillRect(this.offsets[i].bot.xOffset + Math.floor(intersects[0].uv.x * this.offsets[i].bot.sizeX), this.offsets[i].bot.yOffset + Math.floor(intersects[0].uv.y * this.offsets[i].bot.sizeY), 1, 1);
-                                        break;
-                                    case 4: // front
-                                        this.ctx.fillRect(this.offsets[i].front.xOffset + Math.floor(intersects[0].uv.x * this.offsets[i].front.sizeX), this.offsets[i].front.yOffset + ((this.offsets[i].front.sizeY-1)-Math.floor(intersects[0].uv.y * this.offsets[i].front.sizeY)), 1, 1);
-                                        break;
-                                    case 5: // back
-                                        this.ctx.fillRect(this.offsets[i].back.xOffset + Math.floor(intersects[0].uv.x * this.offsets[i].back.sizeX), this.offsets[i].back.yOffset + ((this.offsets[i].back.sizeY-1)-Math.floor(intersects[0].uv.y * this.offsets[i].back.sizeY)), 1, 1);
-                                        break;
-                                }
-                                break;
-                            }
-                        }
-
-                    } else {
-                        if (!this.touchDevice && !this.drawing) {
-                            this.dragging = true;
-                        }
-                    }
-                    break;
-                case 1: // Eraser
-                    if (!this.touchDevice && !this.mouseDown) {
-                        break;
-                    }
-
-                    if (!this.touchDevice && this.dragging && !this.drawing) {
-                        controls.enabled = true;
-                    }
-
-                    if (outer) {
-                        if (intersects.length > 0 && !this.dragging) {
-                            controls.enabled = false;
-                            if (!this.touchDevice) {
-                                this.dragging = false;
-                                this.drawing = true;
-                            }
-                            let faceIndex = (intersects[0].faceIndex % 2 === 1 ? intersects[0].faceIndex - 1 : intersects[0].faceIndex) / 2;
-                            for (let i = 0; i < this.offsets.length; i++) {
-                                if (intersects[0].object === this.offsets[i].object) {
-                                    switch (faceIndex) {
-                                        case 0: // left
-                                            this.ctx.clearRect(this.offsets[i].left.xOffset + ((this.offsets[i].left.sizeX-1)-Math.floor(intersects[0].uv.x * this.offsets[i].left.sizeX)), this.offsets[i].left.yOffset + (this.offsets[i].left.sizeY-1)-Math.floor(intersects[0].uv.y *  this.offsets[i].left.sizeY), 1, 1);
-                                            break;
-                                        case 1: // right
-                                            this.ctx.clearRect(this.offsets[i].right.xOffset + ((this.offsets[i].right.sizeX-1)-Math.floor(intersects[0].uv.x * this.offsets[i].right.sizeX)), this.offsets[i].right.yOffset  + (this.offsets[i].right.sizeY-1)-Math.floor(intersects[0].uv.y * this.offsets[i].right.sizeY), 1, 1);
-                                            break;
-                                        case 2: // top
-                                            this.ctx.clearRect(this.offsets[i].top.xOffset + Math.floor(intersects[0].uv.x * this.offsets[i].top.sizeX), this.offsets[i].top.yOffset + ((this.offsets[i].top.sizeY-1)-Math.floor(intersects[0].uv.y * this.offsets[i].top.sizeY)), 1, 1);
-                                            break;
-                                        case 3: // bot
-                                            this.ctx.clearRect(this.offsets[i].bot.xOffset + Math.floor(intersects[0].uv.x * this.offsets[i].bot.sizeX), this.offsets[i].bot.yOffset + Math.floor(intersects[0].uv.y * this.offsets[i].bot.sizeY), 1, 1);
-                                            break;
-                                        case 4: // front
-                                            this.ctx.clearRect(this.offsets[i].front.xOffset + Math.floor(intersects[0].uv.x * this.offsets[i].front.sizeX), this.offsets[i].front.yOffset + ((this.offsets[i].front.sizeY-1)-Math.floor(intersects[0].uv.y * this.offsets[i].front.sizeY)), 1, 1);
-                                            break;
-                                        case 5: // back
-                                            this.ctx.clearRect(this.offsets[i].back.xOffset + Math.floor(intersects[0].uv.x * this.offsets[i].back.sizeX), this.offsets[i].back.yOffset + ((this.offsets[i].back.sizeY-1)-Math.floor(intersects[0].uv.y * this.offsets[i].back.sizeY)), 1, 1);
-                                            break;
-                                    }
-                                    break;
-                                }
-                            }
-                        } else {
-                            if (!this.touchDevice && !this.drawing) {
-                                this.dragging = true;
-                            }
-                        }
-                    }
-                    break;
-                case 2: // Rotate
-                    controls.enabled = true;
-                    break;
-                case 3: // Eye Dropper
-                    if (!this.touchDevice && !this.mouseDown) {
-                        break;
-                    }
-
-                    if (!this.touchDevice && this.dragging && !this.drawing) {
-                        controls.enabled = true;
-                    }
-
-                    if (intersects.length > 0 && !this.dragging) {
-                        controls.enabled = false;
-                        if (!this.touchDevice) {
-                            this.dragging = false;
-                            this.drawing = true;
-                        }
-                        let faceIndex = (intersects[0].faceIndex % 2 === 1 ? intersects[0].faceIndex - 1 : intersects[0].faceIndex) / 2;
-                        let p = null;
-                        for (let i = 0; i < this.offsets.length; i++) {
-                            if (intersects[0].object === this.offsets[i].object) {
-                                switch (faceIndex) {
-                                    case 0: // left
-                                        p = this.ctx.getImageData(this.offsets[i].left.xOffset + ((this.offsets[i].left.sizeX-1)-Math.floor(intersects[0].uv.x * this.offsets[i].left.sizeX)), this.offsets[i].left.yOffset + (this.offsets[i].left.sizeY-1)-Math.floor(intersects[0].uv.y *  this.offsets[i].left.sizeY), 1, 1).data
-                                        break;
-                                    case 1: // right
-                                        p = this.ctx.getImageData(this.offsets[i].right.xOffset + ((this.offsets[i].right.sizeX-1)-Math.floor(intersects[0].uv.x * this.offsets[i].right.sizeX)), this.offsets[i].right.yOffset  + (this.offsets[i].right.sizeY-1)-Math.floor(intersects[0].uv.y * this.offsets[i].right.sizeY), 1, 1).data;
-                                        break;
-                                    case 2: // top
-                                        p = this.ctx.getImageData(this.offsets[i].top.xOffset + Math.floor(intersects[0].uv.x * this.offsets[i].top.sizeX), this.offsets[i].top.yOffset + ((this.offsets[i].top.sizeY-1)-Math.floor(intersects[0].uv.y * this.offsets[i].top.sizeY)), 1, 1).data;
-                                        break;
-                                    case 3: // bot
-                                        p = this.ctx.getImageData(this.offsets[i].bot.xOffset + Math.floor(intersects[0].uv.x * this.offsets[i].bot.sizeX), this.offsets[i].bot.yOffset + Math.floor(intersects[0].uv.y * this.offsets[i].bot.sizeY), 1, 1).data;
-                                        break;
-                                    case 4: // front
-                                        p = this.ctx.getImageData(this.offsets[i].front.xOffset + Math.floor(intersects[0].uv.x * this.offsets[i].front.sizeX), this.offsets[i].front.yOffset + ((this.offsets[i].front.sizeY-1)-Math.floor(intersects[0].uv.y * this.offsets[i].front.sizeY)), 1, 1).data;
-                                        break;
-                                    case 5: // back
-                                        p = this.ctx.getImageData(this.offsets[i].back.xOffset + Math.floor(intersects[0].uv.x * this.offsets[i].back.sizeX), this.offsets[i].back.yOffset + ((this.offsets[i].back.sizeY-1)-Math.floor(intersects[0].uv.y * this.offsets[i].back.sizeY)), 1, 1).data;
-                                        break;
-                                }
-                                break;
-                            }
-                        }
-
-                        this.colors[colorSlot] = "#" + ("000000" + ((p[0] << 16) | (p[1] << 8) | p[2]).toString(16)).slice(-6);
-                        this.updateColors();
-                    } else {
-                        if (!this.touchDevice && !this.drawing) {
-                            this.dragging = true;
-                        }
-                    }
-
-                    break;
-                case 4: // Bucket
-                    if (!this.touchDevice && !this.mouseDown) {
-                        break;
-                    }
-
-                    if (!this.touchDevice) {
-                        if (this.dragging && !this.drawing) {
-                            controls.enabled = true;
-                        }
-                    } else {
-                        controls.enabled = false;
-                    }
-
-                    if (intersects.length > 0 && !this.dragging) {
-                        controls.enabled = false;
-                        if (!this.touchDevice) {
-                            this.dragging = false;
-                            this.drawing = true;
-                        }
-                        let faceIndex = (intersects[0].faceIndex % 2 === 1 ? intersects[0].faceIndex - 1 : intersects[0].faceIndex) / 2;
-                        for (let i = 0; i < this.offsets.length; i++) {
-                            if (intersects[0].object === this.offsets[i].object) {
-                                switch (faceIndex) {
-                                    case 0: // left
-                                        this.ctx.fillRect(this.offsets[i].left.xOffset, this.offsets[i].left.yOffset, this.offsets[i].left.sizeX, this.offsets[i].left.sizeY);
-                                        break;
-                                    case 1: // right
-                                        this.ctx.fillRect(this.offsets[i].right.xOffset, this.offsets[i].right.yOffset, this.offsets[i].right.sizeX, this.offsets[i].right.sizeY);
-                                        break;
-                                    case 2: // top
-                                        this.ctx.fillRect(this.offsets[i].top.xOffset, this.offsets[i].top.yOffset, this.offsets[i].top.sizeX, this.offsets[i].top.sizeY);
-                                        break;
-                                    case 3: // bot
-                                        this.ctx.fillRect(this.offsets[i].bot.xOffset, this.offsets[i].bot.yOffset, this.offsets[i].bot.sizeX, this.offsets[i].bot.sizeY);
-                                        break;
-                                    case 4: // front
-                                        this.ctx.fillRect(this.offsets[i].front.xOffset, this.offsets[i].front.yOffset, this.offsets[i].front.sizeX, this.offsets[i].front.sizeY);
-                                        break;
-                                    case 5: // back
-                                        this.ctx.fillRect(this.offsets[i].back.xOffset, this.offsets[i].back.yOffset, this.offsets[i].back.sizeX, this.offsets[i].back.sizeY);
-                                        break;
-                                }
-                                break;
-                            }
-                        }
-
-                    } else {
-                        if (!this.touchDevice && !this.drawing) {
-                            this.dragging = true;
-                        }
-                    }
-                    break;
-            }
-        };
-
-        start();
+        this.loadPreset(steve);
+        this.animate();
 
         // Double Click Handler
         setInterval(() => {
@@ -362,6 +164,241 @@ export default class App extends Component {
 
     };
 
+    update = () => {
+        let {colorSlot, mode, outer} = this.state;
+        let {raycaster, camera, controls} = this;
+        raycaster.setFromCamera(this.mouse, camera);
+        let intersects = raycaster.intersectObjects(this.scene.children);
+        this.ctx.fillStyle = this.colors[this.state.colorSlot];
+        switch (mode) {
+            case -1:
+                controls.enabled = false;
+                break;
+            case 0: // Pencil
+                if (!this.touchDevice && !this.mouseDown) {
+                    break;
+                }
+
+                if (!this.touchDevice) {
+                    if (this.dragging && !this.drawing) {
+                        controls.enabled = true;
+                    }
+                } else {
+                    controls.enabled = false;
+                }
+
+                if (intersects.length > 0 && !this.dragging) {
+                    controls.enabled = false;
+                    if (!this.touchDevice) {
+                        this.dragging = false;
+                        this.drawing = true;
+                    }
+                    let faceIndex = (intersects[0].faceIndex % 2 === 1 ? intersects[0].faceIndex - 1 : intersects[0].faceIndex) / 2;
+                    for (let i = 0; i < this.offsets.length; i++) {
+                        if (intersects[0].object === this.offsets[i].object) {
+                            switch (faceIndex) {
+                                case 0: // left
+                                    this.ctx.fillRect(this.offsets[i].left.xOffset + Math.floor(intersects[0].uv.x * this.offsets[i].left.sizeX), this.offsets[i].left.yOffset + (this.offsets[i].left.sizeY - 1) - Math.floor(intersects[0].uv.y * this.offsets[i].left.sizeY), 1, 1);
+                                    break;
+                                case 1: // right
+                                    this.ctx.fillRect(this.offsets[i].right.xOffset + Math.floor(intersects[0].uv.x * this.offsets[i].right.sizeX), this.offsets[i].right.yOffset + (this.offsets[i].right.sizeY - 1) - Math.floor(intersects[0].uv.y * this.offsets[i].right.sizeY), 1, 1);
+                                    break;
+                                case 2: // top
+                                    this.ctx.fillRect(this.offsets[i].top.xOffset + Math.floor(intersects[0].uv.x * this.offsets[i].top.sizeX), this.offsets[i].top.yOffset + ((this.offsets[i].top.sizeY - 1) - Math.floor(intersects[0].uv.y * this.offsets[i].top.sizeY)), 1, 1);
+                                    break;
+                                case 3: // bot
+                                    this.ctx.fillRect(this.offsets[i].bot.xOffset + Math.floor(intersects[0].uv.x * this.offsets[i].bot.sizeX), this.offsets[i].bot.yOffset + Math.floor(intersects[0].uv.y * this.offsets[i].bot.sizeY), 1, 1);
+                                    break;
+                                case 4: // front
+                                    this.ctx.fillRect(this.offsets[i].front.xOffset + Math.floor(intersects[0].uv.x * this.offsets[i].front.sizeX), this.offsets[i].front.yOffset + ((this.offsets[i].front.sizeY - 1) - Math.floor(intersects[0].uv.y * this.offsets[i].front.sizeY)), 1, 1);
+                                    break;
+                                case 5: // back
+                                    this.ctx.fillRect(this.offsets[i].back.xOffset + Math.floor(intersects[0].uv.x * this.offsets[i].back.sizeX), this.offsets[i].back.yOffset + ((this.offsets[i].back.sizeY - 1) - Math.floor(intersects[0].uv.y * this.offsets[i].back.sizeY)), 1, 1);
+                                    break;
+                            }
+                            break;
+                        }
+                    }
+
+                } else {
+                    if (!this.touchDevice && !this.drawing) {
+                        this.dragging = true;
+                    }
+                }
+                break;
+            case 1: // Eraser
+                if (!this.touchDevice && !this.mouseDown) {
+                    break;
+                }
+
+                if (!this.touchDevice && this.dragging && !this.drawing) {
+                    controls.enabled = true;
+                }
+
+                if (outer) {
+                    if (intersects.length > 0 && !this.dragging) {
+                        controls.enabled = false;
+                        if (!this.touchDevice) {
+                            this.dragging = false;
+                            this.drawing = true;
+                        }
+                        let faceIndex = (intersects[0].faceIndex % 2 === 1 ? intersects[0].faceIndex - 1 : intersects[0].faceIndex) / 2;
+                        for (let i = 0; i < this.offsets.length; i++) {
+                            if (intersects[0].object === this.offsets[i].object) {
+                                switch (faceIndex) {
+                                    case 0: // left
+                                        this.ctx.clearRect(this.offsets[i].left.xOffset + ((this.offsets[i].left.sizeX - 1) - Math.floor(intersects[0].uv.x * this.offsets[i].left.sizeX)), this.offsets[i].left.yOffset + (this.offsets[i].left.sizeY - 1) - Math.floor(intersects[0].uv.y * this.offsets[i].left.sizeY), 1, 1);
+                                        break;
+                                    case 1: // right
+                                        this.ctx.clearRect(this.offsets[i].right.xOffset + ((this.offsets[i].right.sizeX - 1) - Math.floor(intersects[0].uv.x * this.offsets[i].right.sizeX)), this.offsets[i].right.yOffset + (this.offsets[i].right.sizeY - 1) - Math.floor(intersects[0].uv.y * this.offsets[i].right.sizeY), 1, 1);
+                                        break;
+                                    case 2: // top
+                                        this.ctx.clearRect(this.offsets[i].top.xOffset + Math.floor(intersects[0].uv.x * this.offsets[i].top.sizeX), this.offsets[i].top.yOffset + ((this.offsets[i].top.sizeY - 1) - Math.floor(intersects[0].uv.y * this.offsets[i].top.sizeY)), 1, 1);
+                                        break;
+                                    case 3: // bot
+                                        this.ctx.clearRect(this.offsets[i].bot.xOffset + Math.floor(intersects[0].uv.x * this.offsets[i].bot.sizeX), this.offsets[i].bot.yOffset + Math.floor(intersects[0].uv.y * this.offsets[i].bot.sizeY), 1, 1);
+                                        break;
+                                    case 4: // front
+                                        this.ctx.clearRect(this.offsets[i].front.xOffset + Math.floor(intersects[0].uv.x * this.offsets[i].front.sizeX), this.offsets[i].front.yOffset + ((this.offsets[i].front.sizeY - 1) - Math.floor(intersects[0].uv.y * this.offsets[i].front.sizeY)), 1, 1);
+                                        break;
+                                    case 5: // back
+                                        this.ctx.clearRect(this.offsets[i].back.xOffset + Math.floor(intersects[0].uv.x * this.offsets[i].back.sizeX), this.offsets[i].back.yOffset + ((this.offsets[i].back.sizeY - 1) - Math.floor(intersects[0].uv.y * this.offsets[i].back.sizeY)), 1, 1);
+                                        break;
+                                }
+                                break;
+                            }
+                        }
+                    } else {
+                        if (!this.touchDevice && !this.drawing) {
+                            this.dragging = true;
+                        }
+                    }
+                }
+                break;
+            case 2: // Rotate
+                controls.enabled = true;
+                break;
+            case 3: // Eye Dropper
+                if (!this.touchDevice && !this.mouseDown) {
+                    break;
+                }
+
+                if (!this.touchDevice && this.dragging && !this.drawing) {
+                    controls.enabled = true;
+                }
+
+                if (intersects.length > 0 && !this.dragging) {
+                    controls.enabled = false;
+                    if (!this.touchDevice) {
+                        this.dragging = false;
+                        this.drawing = true;
+                    }
+                    let faceIndex = (intersects[0].faceIndex % 2 === 1 ? intersects[0].faceIndex - 1 : intersects[0].faceIndex) / 2;
+                    let p = null;
+                    for (let i = 0; i < this.offsets.length; i++) {
+                        if (intersects[0].object === this.offsets[i].object) {
+                            switch (faceIndex) {
+                                case 0: // left
+                                    p = this.ctx.getImageData(this.offsets[i].left.xOffset + ((this.offsets[i].left.sizeX - 1) - Math.floor(intersects[0].uv.x * this.offsets[i].left.sizeX)), this.offsets[i].left.yOffset + (this.offsets[i].left.sizeY - 1) - Math.floor(intersects[0].uv.y * this.offsets[i].left.sizeY), 1, 1).data;
+                                    break;
+                                case 1: // right
+                                    p = this.ctx.getImageData(this.offsets[i].right.xOffset + ((this.offsets[i].right.sizeX - 1) - Math.floor(intersects[0].uv.x * this.offsets[i].right.sizeX)), this.offsets[i].right.yOffset + (this.offsets[i].right.sizeY - 1) - Math.floor(intersects[0].uv.y * this.offsets[i].right.sizeY), 1, 1).data;
+                                    break;
+                                case 2: // top
+                                    p = this.ctx.getImageData(this.offsets[i].top.xOffset + Math.floor(intersects[0].uv.x * this.offsets[i].top.sizeX), this.offsets[i].top.yOffset + ((this.offsets[i].top.sizeY - 1) - Math.floor(intersects[0].uv.y * this.offsets[i].top.sizeY)), 1, 1).data;
+                                    break;
+                                case 3: // bot
+                                    p = this.ctx.getImageData(this.offsets[i].bot.xOffset + Math.floor(intersects[0].uv.x * this.offsets[i].bot.sizeX), this.offsets[i].bot.yOffset + Math.floor(intersects[0].uv.y * this.offsets[i].bot.sizeY), 1, 1).data;
+                                    break;
+                                case 4: // front
+                                    p = this.ctx.getImageData(this.offsets[i].front.xOffset + Math.floor(intersects[0].uv.x * this.offsets[i].front.sizeX), this.offsets[i].front.yOffset + ((this.offsets[i].front.sizeY - 1) - Math.floor(intersects[0].uv.y * this.offsets[i].front.sizeY)), 1, 1).data;
+                                    break;
+                                case 5: // back
+                                    p = this.ctx.getImageData(this.offsets[i].back.xOffset + Math.floor(intersects[0].uv.x * this.offsets[i].back.sizeX), this.offsets[i].back.yOffset + ((this.offsets[i].back.sizeY - 1) - Math.floor(intersects[0].uv.y * this.offsets[i].back.sizeY)), 1, 1).data;
+                                    break;
+                            }
+                            break;
+                        }
+                    }
+
+                    this.colors[colorSlot] = "#" + ("000000" + ((p[0] << 16) | (p[1] << 8) | p[2]).toString(16)).slice(-6);
+                    this.updateColors();
+                } else {
+                    if (!this.touchDevice && !this.drawing) {
+                        this.dragging = true;
+                    }
+                }
+
+                break;
+            case 4: // Bucket
+                if (!this.touchDevice && !this.mouseDown) {
+                    break;
+                }
+
+                if (!this.touchDevice) {
+                    if (this.dragging && !this.drawing) {
+                        controls.enabled = true;
+                    }
+                } else {
+                    controls.enabled = false;
+                }
+
+                if (intersects.length > 0 && !this.dragging) {
+                    controls.enabled = false;
+                    if (!this.touchDevice) {
+                        this.dragging = false;
+                        this.drawing = true;
+                    }
+                    let faceIndex = (intersects[0].faceIndex % 2 === 1 ? intersects[0].faceIndex - 1 : intersects[0].faceIndex) / 2;
+                    for (let i = 0; i < this.offsets.length; i++) {
+                        if (intersects[0].object === this.offsets[i].object) {
+                            switch (faceIndex) {
+                                case 0: // left
+                                    this.ctx.fillRect(this.offsets[i].left.xOffset, this.offsets[i].left.yOffset, this.offsets[i].left.sizeX, this.offsets[i].left.sizeY);
+                                    break;
+                                case 1: // right
+                                    this.ctx.fillRect(this.offsets[i].right.xOffset, this.offsets[i].right.yOffset, this.offsets[i].right.sizeX, this.offsets[i].right.sizeY);
+                                    break;
+                                case 2: // top
+                                    this.ctx.fillRect(this.offsets[i].top.xOffset, this.offsets[i].top.yOffset, this.offsets[i].top.sizeX, this.offsets[i].top.sizeY);
+                                    break;
+                                case 3: // bot
+                                    this.ctx.fillRect(this.offsets[i].bot.xOffset, this.offsets[i].bot.yOffset, this.offsets[i].bot.sizeX, this.offsets[i].bot.sizeY);
+                                    break;
+                                case 4: // front
+                                    this.ctx.fillRect(this.offsets[i].front.xOffset, this.offsets[i].front.yOffset, this.offsets[i].front.sizeX, this.offsets[i].front.sizeY);
+                                    break;
+                                case 5: // back
+                                    this.ctx.fillRect(this.offsets[i].back.xOffset, this.offsets[i].back.yOffset, this.offsets[i].back.sizeX, this.offsets[i].back.sizeY);
+                                    break;
+                            }
+                            break;
+                        }
+                    }
+
+                } else {
+                    if (!this.touchDevice && !this.drawing) {
+                        this.dragging = true;
+                    }
+                }
+                break;
+        }
+    };
+
+    animate = () => {
+        requestAnimationFrame(this.animate);
+        this.camera.lookAt(0, 0);
+
+        this.controls.update();
+        this.renderer.render(this.scene, this.camera);
+
+        for (let t = 0; t < this.textures.length; t++) {
+            this.textures[t].needsUpdate = true;
+        }
+
+        this.update();
+    };
+
     createBodyPart = (objRef, texture, leftParam, rightParam, topParam, botParam, frontParam, backParam, dims) => {
         let left = texture.clone();
         let right = texture.clone();
@@ -370,29 +407,29 @@ export default class App extends Component {
         let front = texture.clone();
         let back = texture.clone();
 
-        left.repeat.set(leftParam.sizeX/64, leftParam.sizeY/64);
-        left.offset.x = leftParam.xOffset/64;
-        left.offset.y = 1 - (leftParam.sizeY/64) - (leftParam.yOffset/64);
+        left.repeat.set(leftParam.sizeX / 64, leftParam.sizeY / 64);
+        left.offset.x = leftParam.xOffset / 64;
+        left.offset.y = 1 - (leftParam.sizeY / 64) - (leftParam.yOffset / 64);
 
-        right.repeat.set(rightParam.sizeX/64, rightParam.sizeY/64);
-        right.offset.x = rightParam.xOffset/64;
-        right.offset.y = 1 - (rightParam.sizeY/64) - (rightParam.yOffset/64);
+        right.repeat.set(rightParam.sizeX / 64, rightParam.sizeY / 64);
+        right.offset.x = rightParam.xOffset / 64;
+        right.offset.y = 1 - (rightParam.sizeY / 64) - (rightParam.yOffset / 64);
 
-        top.repeat.set(topParam.sizeX/64, topParam.sizeY/64);
-        top.offset.x = topParam.xOffset/64;
-        top.offset.y = 1 - (topParam.sizeY/64) - (topParam.yOffset/64);
+        top.repeat.set(topParam.sizeX / 64, topParam.sizeY / 64);
+        top.offset.x = topParam.xOffset / 64;
+        top.offset.y = 1 - (topParam.sizeY / 64) - (topParam.yOffset / 64);
 
-        bot.repeat.set(botParam.sizeX/64, -botParam.sizeY/64);
-        bot.offset.x = botParam.xOffset/64;
-        bot.offset.y = 1 - (botParam.sizeY/64) - (botParam.yOffset/64) + botParam.sizeY/64;
+        bot.repeat.set(botParam.sizeX / 64, -botParam.sizeY / 64);
+        bot.offset.x = botParam.xOffset / 64;
+        bot.offset.y = 1 - (botParam.sizeY / 64) - (botParam.yOffset / 64) + botParam.sizeY / 64;
 
-        front.repeat.set(frontParam.sizeX/64, frontParam.sizeY/64);
-        front.offset.x = frontParam.xOffset/64;
-        front.offset.y = 1 - (frontParam.sizeY/64) - (frontParam.yOffset/64);
+        front.repeat.set(frontParam.sizeX / 64, frontParam.sizeY / 64);
+        front.offset.x = frontParam.xOffset / 64;
+        front.offset.y = 1 - (frontParam.sizeY / 64) - (frontParam.yOffset / 64);
 
-        back.repeat.set(backParam.sizeX/64, backParam.sizeY/64);
-        back.offset.x = backParam.xOffset/64;
-        back.offset.y = 1 - (backParam.sizeY/64) - (backParam.yOffset/64);
+        back.repeat.set(backParam.sizeX / 64, backParam.sizeY / 64);
+        back.offset.x = backParam.xOffset / 64;
+        back.offset.y = 1 - (backParam.sizeY / 64) - (backParam.yOffset / 64);
 
         this.textures.push(left);
         this.textures.push(right);
@@ -401,29 +438,45 @@ export default class App extends Component {
         this.textures.push(front);
         this.textures.push(back);
 
-        let material = [new THREE.MeshBasicMaterial({ map: left }), new THREE.MeshBasicMaterial({ map: right }), new THREE.MeshBasicMaterial({ map: top }), new THREE.MeshBasicMaterial({ map: bot }), new THREE.MeshBasicMaterial({ map: front }), new THREE.MeshBasicMaterial({ map: back })];
-        let geometry = new THREE.BoxBufferGeometry( dims.x, dims.y, dims.z);
+        let material = [new THREE.MeshBasicMaterial({map: left}), new THREE.MeshBasicMaterial({map: right}), new THREE.MeshBasicMaterial({map: top}), new THREE.MeshBasicMaterial({map: bot}), new THREE.MeshBasicMaterial({map: front}), new THREE.MeshBasicMaterial({map: back})];
+        let geometry = new THREE.BoxBufferGeometry(dims.x, dims.y, dims.z);
 
         if (dims.isOuter) {
-            material = [new THREE.MeshBasicMaterial({ map: left, transparent: true }), new THREE.MeshBasicMaterial({ map: right, transparent: true }), new THREE.MeshBasicMaterial({ map: top, transparent: true }), new THREE.MeshBasicMaterial({ map: bot, transparent: true }), new THREE.MeshBasicMaterial({ map: front, transparent: true }), new THREE.MeshBasicMaterial({ map: back, transparent: true })];
-            geometry = new THREE.BoxBufferGeometry( dims.x + 0.5, dims.y + 0.5, dims.z + 0.5);
+            material = [new THREE.MeshBasicMaterial({
+                map: left,
+                transparent: true
+            }), new THREE.MeshBasicMaterial({map: right, transparent: true}), new THREE.MeshBasicMaterial({
+                map: top,
+                transparent: true
+            }), new THREE.MeshBasicMaterial({map: bot, transparent: true}), new THREE.MeshBasicMaterial({
+                map: front,
+                transparent: true
+            }), new THREE.MeshBasicMaterial({map: back, transparent: true})];
+            geometry = new THREE.BoxBufferGeometry(dims.x + 0.5, dims.y + 0.5, dims.z + 0.5);
         }
 
-        let obj = new THREE.Mesh( geometry, material );
-        this.offsets.push({object: obj, left: leftParam, right: rightParam, top: topParam, bot: botParam, front: frontParam, back: backParam});
+        let obj = new THREE.Mesh(geometry, material);
+        this.offsets.push({
+            object: obj,
+            left: leftParam,
+            right: rightParam,
+            top: topParam,
+            bot: botParam,
+            front: frontParam,
+            back: backParam
+        });
+
 
         if (dims.isOuter) {
-            var geo = new THREE.EdgesGeometry( obj.geometry );
-            var mat = new THREE.LineBasicMaterial( { color: 0x000000, linewidth: 1 } );
-            var wireframe = new THREE.LineSegments( geo, mat );
+            let geo = new THREE.EdgesGeometry(obj.geometry);
+            let mat = new THREE.LineBasicMaterial({color: 0x000000, linewidth: 1});
+            let wireframe = new THREE.LineSegments(geo, mat);
             wireframe.renderOrder = 1; // make sure wireframes are rendered 2nd
-            obj.add( wireframe );
+            obj.add(wireframe);
         }
-
 
         return obj;
     };
-
 
     init = () => {
         this.clearScene();
@@ -672,16 +725,17 @@ export default class App extends Component {
     showFull = () => {
         this.clearScene();
         this.head.position.set(0, 12, 0);
-        this.scene.add(this.head);
         this.headOuter.position.set(0, 12, 0);
         this.chest.position.set(0, 2, 0);
-        this.scene.add(this.chest);
         this.chestOuter.position.set(0, 2, 0);
 
+        this.scene.add(this.head);
+        this.scene.add(this.chest);
         this.scene.add(this.armL);
         this.scene.add(this.armR);
         this.scene.add(this.legL);
         this.scene.add(this.legR);
+
         this.legL.position.set(-2, -10, 0);
         this.legLOuter.position.set(-2, -10, 0);
         this.legR.position.set(2, -10, 0);
@@ -698,7 +752,6 @@ export default class App extends Component {
             this.armR.position.set(-6, 2, 0);
             this.armROuter.position.set(-6, 2, 0);
         }
-
 
 
         if (this.state.outer) {
@@ -806,6 +859,7 @@ export default class App extends Component {
     };
 
     toggleLayer = (e) => {
+        e.stopPropagation();
         if (this.state.part === -1) {
             if (this.state.outer) {
                 this.setState({outer: false});
@@ -888,6 +942,7 @@ export default class App extends Component {
                     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
                     this.ctx.drawImage(img, 0, 0);
                     this.init();
+                    this.resetActions();
                 } else {
                     console.log("Error! Invalid skin file");
                 }
@@ -911,6 +966,7 @@ export default class App extends Component {
                     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
                     this.ctx.drawImage(img, 0, 0);
                     this.init();
+                    this.resetActions();
                 } else {
                     console.log("Error! Invalid skin file");
                 }
@@ -925,8 +981,10 @@ export default class App extends Component {
 
         let img = new Image();
         img.onload = () => {
+            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
             this.ctx.drawImage(img, 0, 0);
             this.init();
+            this.resetActions();
         };
         img.src = skin;
     };
@@ -941,11 +999,63 @@ export default class App extends Component {
         img.onload = () => {
             this.ctx.drawImage(img, 0, 0);
             this.init();
+            this.resetActions();
         };
         if (this.state.isAlex) {
             img.src = alex;
         } else {
             img.src = steve;
+        }
+    };
+
+    resetActions = () => {
+        this.aIdx = -1;
+        this.actions = [];
+        this.addAction();
+    };
+
+    addAction = () => {
+        if (this.actions.length > this.aSize) {
+            this.actions.shift();
+        }
+
+        if (this.actions[this.aIdx] !== this.canvas.toDataURL()) {
+            this.aIdx++;
+            this.actions = this.actions.slice(0, this.aIdx);
+            this.actions.push(this.canvas.toDataURL());
+        }
+
+        console.log(this.actions);
+        console.log(this.aIdx);
+    };
+
+    undo = (e) => {
+        if (this.aIdx !== 0) {
+            this.aIdx--;
+
+            let image = new Image();
+            image.onload = () => {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                this.ctx.drawImage(image, 0, 0);
+            };
+            image.src = this.actions[this.aIdx];
+        } else {
+            console.log("cant undo");
+        }
+
+    };
+
+    redo = (e) => {
+        if (this.aIdx !== this.actions.length - 1) {
+            this.aIdx++;
+            let image = new Image();
+            image.onload = () => {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                this.ctx.drawImage(image, 0, 0);
+            };
+            image.src = this.actions[this.aIdx];
+        } else {
+            console.log("cant redo");
         }
     };
 
@@ -982,9 +1092,24 @@ export default class App extends Component {
                     </div>
                 </div>
 
-                <div className={"layer-tool tool-holder" + (this.state.outer ? ' th-selected' : '')} onClick={this.toggleLayer}>
+                <div className={"layer-tool tool-holder" + (this.state.outer ? ' th-selected' : '')}
+                     onClick={this.toggleLayer}>
                     <FontAwesomeIcon className="tool" icon={faLayerGroup} size="2x"/>
                 </div>
+
+                <div className="do-buttons">
+                    <div className="tool-holder"
+                         onClick={this.undo}>
+                        <FontAwesomeIcon className="tool" icon={faUndo} size="2x"
+                                         style={{color: this.aIdx !== 0 ? '#393e46' : "white"}}/>
+                    </div>
+                    <div className="tool-holder"
+                         onClick={this.redo}>
+                        <FontAwesomeIcon className="tool" icon={faRedo} size="2x"
+                                         style={{color: this.aIdx !== this.actions.length - 1 ? '#393e46' : "white"}}/>
+                    </div>
+                </div>
+
 
                 <div className="colors">
                     <div onClick={this.colorSelect} ref="slot0" slot='0'
@@ -1009,9 +1134,17 @@ export default class App extends Component {
 
                 </div>
 
-                <Pallet colorSlot={this.state.colorSlot} colorSelect={this.changeColorSlot} colorSelectCustom={this.changeColorSlotCustom} closePallet={this.closePallet} pallet={this.state.pallet}/>
-                <Menu loadFromDrop={this.loadImageFromDrop} fromScratch={this.fromScratch} setAlex={this.setAlex} loadImage={this.loadImage} closeMenu={this.closeMenu} menu={this.state.menu} canvasAccess={(c) => { this.canvas = c; } }/>
-                <Parts part={this.state.part} full={this.showFull} head={this.showHead} chest={this.showChest} leftArm={this.showLeftArm} rightArm={this.showRightArm} leftLeg={this.showLeftLeg} rightLeg={this.showRightLeg}/>
+                <Pallet colorSlot={this.state.colorSlot} colorSelect={this.changeColorSlot}
+                        colorSelectCustom={this.changeColorSlotCustom} closePallet={this.closePallet}
+                        pallet={this.state.pallet}/>
+                <Menu loadFromDrop={this.loadImageFromDrop} fromScratch={this.fromScratch} setAlex={this.setAlex}
+                      loadImage={this.loadImage} closeMenu={this.closeMenu} menu={this.state.menu}
+                      canvasAccess={(c) => {
+                          this.canvas = c;
+                      }}/>
+                <Parts part={this.state.part} full={this.showFull} head={this.showHead} chest={this.showChest}
+                       leftArm={this.showLeftArm} rightArm={this.showRightArm} leftLeg={this.showLeftLeg}
+                       rightLeg={this.showRightLeg}/>
             </div>
         );
     }

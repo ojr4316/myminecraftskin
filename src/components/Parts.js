@@ -13,16 +13,16 @@ export default class Parts extends Component {
     render() {
         let r ;
         if (this.props.part === -1) {
-            r = <div><img src={face} className="part face" onClick={this.props.head}/>
+            r = <div><img alt="face" src={face} className="part face" onClick={this.props.head}/>
                 <br/>
-                <img src={leftarm} className="part appendage" onClick={this.props.leftArm}/>
-                <img src={chest} className="part chest" onClick={this.props.chest}/>
-                <img src={rightarm} className="part appendage" onClick={this.props.rightArm}/>
+                <img alt="leftarm" src={leftarm} className="part appendage" onClick={this.props.leftArm}/>
+                <img alt="chest" src={chest} className="part chest" onClick={this.props.chest}/>
+                <img alt="rightarm" src={rightarm} className="part appendage" onClick={this.props.rightArm}/>
                 <br/>
-                <img src={leftleg} className="part appendage" onClick={this.props.leftLeg}/>
-                <img src={rightleg} className="part appendage" onClick={this.props.rightLeg}/></div>;
+                <img alt="leftleg" src={leftleg} className="part appendage" onClick={this.props.leftLeg}/>
+                <img alt="rightleg" src={rightleg} className="part appendage" onClick={this.props.rightLeg}/></div>;
         } else {
-            r = <div><img src={full} className="part full" onClick={this.props.full}/></div>
+            r = <div><img alt="full body" src={full} className="part full" onClick={this.props.full}/></div>
         }
         return (
             <div className="parts">
