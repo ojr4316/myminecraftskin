@@ -1,18 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="9d8cd45a-e373-4ec1-aab6-8e45cfb018b8" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/src/components/LoadablePallet.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/components/PalletSelector.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/components/SkinMenu.js" afterDir="false" />
+    <list default="true" id="9d8cd45a-e373-4ec1-aab6-8e45cfb018b8" name="Default Changelist" comment="Beta Testing">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/public/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/App.css" beforeDir="false" afterPath="$PROJECT_DIR$/src/App.css" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/App.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/App.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/Editor.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/Menu.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/components/Pallet.js" beforeDir="false" afterPath="$PROJECT_DIR$/src/components/Pallet.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/img/skin.png" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -36,6 +27,11 @@
       <list>
         <option value="Owen &lt;314owen@gmail.com&gt;" />
       </list>
+    </option>
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="master" />
+      </map>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
     <option name="UPDATE_TYPE" value="MERGE" />
@@ -120,7 +116,11 @@
       <workItem from="1579074088047" duration="12113000" />
       <workItem from="1579565619711" duration="99711000" />
       <workItem from="1580104899740" duration="50794000" />
-      <workItem from="1580449373699" duration="1672000" />
+      <workItem from="1580449373699" duration="2381000" />
+      <workItem from="1580509015387" duration="1212000" />
+      <workItem from="1580579982508" duration="1317000" />
+      <workItem from="1580615144417" duration="2679000" />
+      <workItem from="1580941229981" duration="119000" />
     </task>
     <task id="LOCAL-00001" summary="Works but laggy">
       <created>1579076087229</created>
@@ -157,7 +157,14 @@
       <option name="project" value="LOCAL" />
       <updated>1580079627897</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="Beta Testing">
+      <created>1580481727200</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1580481727200</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -169,7 +176,8 @@
     <MESSAGE value="Optimized!" />
     <MESSAGE value="Fixed alex skin positioning problems and minor glitches" />
     <MESSAGE value="Undo/Redo Stable" />
-    <option name="LAST_COMMIT_MESSAGE" value="Undo/Redo Stable" />
+    <MESSAGE value="Beta Testing" />
+    <option name="LAST_COMMIT_MESSAGE" value="Beta Testing" />
   </component>
   <component name="WindowStateProjectService">
     <state x="-1230" y="382" key="#com.intellij.refactoring.safeDelete.UnsafeUsagesDialog" timestamp="1579734843113">
@@ -180,34 +188,34 @@
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state x="707" y="386" key="ANALYSIS_DLG_com.intellij.analysis.BaseAnalysisAction$1/0.0.1920.1040/-1920.94.1920.1080@0.0.1920.1040" timestamp="1580080737379" />
-    <state x="585" y="115" key="CommitChangelistDialog2" timestamp="1580079626606">
+    <state x="585" y="115" key="CommitChangelistDialog2" timestamp="1580941293220">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state x="585" y="115" key="CommitChangelistDialog2/0.0.1920.1040/-1920.94.1920.1080@0.0.1920.1040" timestamp="1580079626606" />
-    <state width="1877" height="255" key="GridCell.Tab.0.bottom" timestamp="1580449174657">
+    <state x="585" y="115" key="CommitChangelistDialog2/0.0.1920.1040/-1920.94.1920.1080@0.0.1920.1040" timestamp="1580941293220" />
+    <state width="1877" height="255" key="GridCell.Tab.0.bottom" timestamp="1580680172319">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state width="1877" height="281" key="GridCell.Tab.0.bottom/0.0.1920.1040/-1920.94.1920.1080@-1920.94.1920.1080" timestamp="1579735653758" />
-    <state width="1877" height="255" key="GridCell.Tab.0.bottom/0.0.1920.1040/-1920.94.1920.1080@0.0.1920.1040" timestamp="1580449174657" />
-    <state width="1877" height="255" key="GridCell.Tab.0.center" timestamp="1580449174657">
+    <state width="1877" height="255" key="GridCell.Tab.0.bottom/0.0.1920.1040/-1920.94.1920.1080@0.0.1920.1040" timestamp="1580680172319" />
+    <state width="1877" height="255" key="GridCell.Tab.0.center" timestamp="1580680172319">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state width="1877" height="281" key="GridCell.Tab.0.center/0.0.1920.1040/-1920.94.1920.1080@-1920.94.1920.1080" timestamp="1579735653758" />
-    <state width="1877" height="255" key="GridCell.Tab.0.center/0.0.1920.1040/-1920.94.1920.1080@0.0.1920.1040" timestamp="1580449174657" />
-    <state width="1877" height="255" key="GridCell.Tab.0.left" timestamp="1580449174656">
+    <state width="1877" height="255" key="GridCell.Tab.0.center/0.0.1920.1040/-1920.94.1920.1080@0.0.1920.1040" timestamp="1580680172319" />
+    <state width="1877" height="255" key="GridCell.Tab.0.left" timestamp="1580680172318">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state width="1877" height="281" key="GridCell.Tab.0.left/0.0.1920.1040/-1920.94.1920.1080@-1920.94.1920.1080" timestamp="1579735653758" />
-    <state width="1877" height="255" key="GridCell.Tab.0.left/0.0.1920.1040/-1920.94.1920.1080@0.0.1920.1040" timestamp="1580449174656" />
-    <state width="1877" height="255" key="GridCell.Tab.0.right" timestamp="1580449174657">
+    <state width="1877" height="255" key="GridCell.Tab.0.left/0.0.1920.1040/-1920.94.1920.1080@0.0.1920.1040" timestamp="1580680172318" />
+    <state width="1877" height="255" key="GridCell.Tab.0.right" timestamp="1580680172319">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state width="1877" height="281" key="GridCell.Tab.0.right/0.0.1920.1040/-1920.94.1920.1080@-1920.94.1920.1080" timestamp="1579735653758" />
-    <state width="1877" height="255" key="GridCell.Tab.0.right/0.0.1920.1040/-1920.94.1920.1080@0.0.1920.1040" timestamp="1580449174657" />
-    <state x="552" y="254" key="Vcs.Push.Dialog.v2" timestamp="1580079629131">
+    <state width="1877" height="255" key="GridCell.Tab.0.right/0.0.1920.1040/-1920.94.1920.1080@0.0.1920.1040" timestamp="1580680172319" />
+    <state x="552" y="254" key="Vcs.Push.Dialog.v2" timestamp="1580481762639">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
-    <state x="552" y="254" key="Vcs.Push.Dialog.v2/0.0.1920.1040/-1920.94.1920.1080@0.0.1920.1040" timestamp="1580079629131" />
+    <state x="552" y="254" key="Vcs.Push.Dialog.v2/0.0.1920.1040/-1920.94.1920.1080@0.0.1920.1040" timestamp="1580481762639" />
     <state x="605" y="136" key="com.intellij.openapi.editor.actions.MultiplePasteAction$ClipboardContentChooser" timestamp="1579673204328">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>

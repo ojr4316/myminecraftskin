@@ -81,6 +81,7 @@ export default class App extends Component {
 
     componentDidMount() {
 
+        /*
         window.addEventListener("dragenter", (e) => {
             e.preventDefault();
             document.querySelector(".dropzone").style.visibility = "";
@@ -105,7 +106,7 @@ export default class App extends Component {
             document.querySelector(".dropzone").style.visibility = "hidden";
             document.querySelector(".dropzone").style.opacity = 0;
         }, false);
-
+       */
 
         this.scene = new THREE.Scene();
         this.camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight,
@@ -449,6 +450,7 @@ export default class App extends Component {
 
         this.controls.update();
         this.renderer.render(this.scene, this.camera);
+
 
         for (let t = 0; t < this.textures.length; t++) {
             this.textures[t].needsUpdate = true;
